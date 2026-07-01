@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include "bsp.h"
 #include "app.h"
+#include "test_bsp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -131,6 +132,11 @@ void StartDefaultTask(void *argument)
 
   /* 应用层初始化 */
   App_Init();
+
+#if (TEST_ENABLE)
+  /* 运行BSP测试 */
+  Test_Run();
+#endif
 
   /* Infinite loop */
   for(;;)

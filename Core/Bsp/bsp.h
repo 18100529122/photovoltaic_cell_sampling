@@ -1,8 +1,8 @@
 #ifndef __BSP_H__
 #define __BSP_H__
 /**
- * @file    
- * @brief   
+ * @file     bsp.h
+ * @brief    板级支持包头文件
  */
 #ifdef __cplusplus
 extern "C" {

@@ -49,9 +49,11 @@ photovoltaic_cell_sampling/
 │   │   ├── bsp.c/h
 │   │   ├── adc/   # ADC驱动
 │   │   └── usart/ # 串口驱动
-│   └── App/       # 应用层
-│       ├── app.c/h
-│       └── data_process/ # 数据处理模块
+│   ├── App/       # 应用层
+│   │   ├── app.c/h
+│   │   └── data_process/ # 数据处理模块
+│   └── test/      # 测试代码
+│       ├── test_bsp.c/h
 ├── Drivers/       # STM32 HAL 驱动
 └── doc/           # 文档目录
 ```
@@ -64,6 +66,19 @@ photovoltaic_cell_sampling/
 3. **数据处理算法** - 每通道200点采集，去掉10个最大/最小值，计算平均值
 4. **printf重定向** - 调试输出到UART4
 5. **FreeRTOS多任务** - LED闪烁和数据处理独立运行
+6. **BSP测试套件** - ADC测试、数据处理测试、UART测试
+
+### 测试说明
+
+测试代码位于 `Core/test/` 目录下，通过宏定义控制开关：
+
+```c
+#define TEST_ENABLE_ADC           1    /* ADC测试 */
+#define TEST_ENABLE_DATA_PROCESS  1    /* 数据处理测试 */
+#define TEST_ENABLE_UART          1    /* 串口测试 */
+```
+
+上电后自动运行所有启用的测试，通过UART4输出测试结果。
 
 ### 待实现
 1. CAN通信 - 发送26路处理后的数据
