@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "bsp.h"
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -128,6 +129,8 @@ void StartDefaultTask(void *argument)
   printf("  System Started\r\n");
   printf("========================================\r\n");
 
+  /* 应用层初始化 */
+  App_Init();
 
   /* Infinite loop */
   for(;;)

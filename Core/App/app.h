@@ -1,16 +1,16 @@
-#ifndef __BSP_H__
-#define __BSP_H__
+#ifndef __APP_H__
+#define __APP_H__
 /**
- * @file    
- * @brief   
+ * @file     app.h
+ * @brief    应用层整合头文件
  */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*========================= 头文件包含 (Includes) ==========================*/
-#include "bsp_usart.h"
-#include "bsp_adc.h"
+#include "main.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -19,13 +19,13 @@ extern "C" {
 /*========================= 全局变量 (Global Variables) ====================*/
 
 /*========================= 函数声明 (Function Declarations) ===============*/
-
 /**
- * @brief 硬件抽象层初始化 (板级支持包初始化)
+ * @brief  应用层初始化
  */
-void BSP_Init(void);
+void App_Init(void);
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* __BSP_H__ */
+
+#endif /* __APP_H__ */

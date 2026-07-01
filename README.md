@@ -1,6 +1,6 @@
 # Photovoltaic Cell Sampling
 
-基于 STM32G474VETx 的光伏电池采样系统固件。
+基于 STM32G474VETx + FreeRTOS 的光伏电池采样系统固件。
 
 ## 硬件配置
 
@@ -23,23 +23,52 @@
 - PB12 (RX), PB13 (TX)
 
 ### UART
-- UART4: 115200 8N1, PC10(TX)/PC11(RX)
-- UART5: 115200 8N1, PC12(TX)/PD2(RX)
+- **UART4**: 115200 8N1, PC10(TX)/PC11(RX) - 调试串口（printf重定向）
+- **UART5**: 115200 8N1, PC12(TX)/PD2(RX) - 心跳串口
 
 ### GPIO
 - LED1: PD14 (高电平亮)
 
-## 项目结构
+## 软件架构
+
+### FreeRTOS 任务
+
+| 任务名称 | 优先级 | 堆栈大小 | 功能描述 |
+|---------|--------|---------|---------|
+| defaultTask | Normal | 512 | LED闪烁 |
+| dataProcessTask | Normal | 2048 | 数据处理 |
+
+### 项目结构
 
 ```
 photovoltaic_cell_sampling/
 ├── Core/
 │   ├── Inc/       # 头文件
 │   ├── Src/       # 源文件
-│   └── Startup/   # 启动文件
+│   ├── Bsp/       # 板级支持包
+│   │   ├── bsp.c/h
+│   │   ├── adc/   # ADC驱动
+│   │   └── usart/ # 串口驱动
+│   └── App/       # 应用层
+│       ├── app.c/h
+│       └── data_process/ # 数据处理模块
 ├── Drivers/       # STM32 HAL 驱动
 └── doc/           # 文档目录
 ```
+
+## 功能说明
+
+### 已实现
+1. **数据结构定义** - 26通道数据结构，包含12路电压、12路电流、2路温度
+2. **ADC+DMA驱动** - 4个ADC通过DMA采集数据
+3. **数据处理算法** - 每通道200点采集，去掉10个最大/最小值，计算平均值
+4. **printf重定向** - 调试输出到UART4
+5. **FreeRTOS多任务** - LED闪烁和数据处理独立运行
+
+### 待实现
+1. CAN通信 - 发送26路处理后的数据
+2. 心跳包 - UART5定时发送
+3. Flash参数存储
 
 ## 编译说明
 
@@ -47,7 +76,3 @@ photovoltaic_cell_sampling/
 - STM32CubeIDE
 - Keil MDK-ARM
 - IAR EWARM
-
-## 注意事项
-
-当前项目为框架代码，业务逻辑待实现。

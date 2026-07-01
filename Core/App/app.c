@@ -1,11 +1,13 @@
 /**
- * @file    
- * @brief   
+ * @file     app.c
+ * @brief    应用层整合实现
  */
 
 /*========================= 头文件包含 (Includes) ==========================*/
-#include "bsp.h"
-#include "bsp_usart.h"
+#include "app.h"
+#include "bsp_adc.h"
+#include "data_process.h"
+#include <stdio.h>
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -18,13 +20,14 @@
 /*========================= 静态函数声明 (Static Function Declarations) ====*/
 
 /*========================= 函数实现 (Function Definitions) ================*/
-
-
 /**
- * @brief  硬件抽象层初始化 (板级支持包初始化)
+ * @brief  应用层初始化
  */
-void BSP_Init(void)
+void App_Init(void)
 {
-    BSP_USART_Init();
     BSP_ADC_Init();
+    DataProcess_Init();
+
+    printf("App Init Complete\r\n");
 }
+

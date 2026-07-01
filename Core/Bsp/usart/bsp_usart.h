@@ -1,7 +1,13 @@
+#ifndef __BSP_USART_H__
+#define __BSP_USART_H__
 /**
  * @file    bsp_usart.h
  * @brief   串口驱动头文件
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "main.h"
@@ -40,3 +46,7 @@ void BSP_USART_Heart_Send(uint8_t *data, uint16_t len);
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
+#ifdef __cplusplus
+}
+#endif
+#endif /* __BSP_USART_H__ */
