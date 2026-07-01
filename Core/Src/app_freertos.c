@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include "bsp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +58,12 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+static void led_toggle(void)
+{
+  static uint8_t led_state=0;
+  HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin , led_state?GPIO_PIN_SET:GPIO_PIN_RESET);
+  led_state=!led_state;
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -114,9 +120,20 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
+  BSP_Init();
+
+  /* 发送启动信息 */
+  printf("\r\n========================================\r\n");
+  printf("  Photovoltaic Cell Sampling System\r\n");
+  printf("  System Started\r\n");
+  printf("========================================\r\n");
+
+
   /* Infinite loop */
   for(;;)
   {
+    led_toggle();
+
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */

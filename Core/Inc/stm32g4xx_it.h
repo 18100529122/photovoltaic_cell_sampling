@@ -55,6 +55,8 @@ void DebugMon_Handler(void);
 void DMA1_Channel1_IRQHandler(void);
 void DMA1_Channel2_IRQHandler(void);
 void TIM1_UP_TIM16_IRQHandler(void);
+void UART4_IRQHandler(void);
+void UART5_IRQHandler(void);
 void DMA2_Channel1_IRQHandler(void);
 void DMA2_Channel2_IRQHandler(void);
 void FDCAN2_IT1_IRQHandler(void);
