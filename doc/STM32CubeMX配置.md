@@ -19,6 +19,18 @@
 
 ---
 
+## 配置方案说明
+
+本项目采用**方案3：定时采集（精确1秒）**
+
+设计思路：
+- 用 TIM2 提供 200Hz 的 ADC 触发（每个通道1秒采200点）
+- 用 TIM3 提供 1Hz 的定时信号，用于启动/停止采集周期
+- DMA 配置为 Normal 模式，一次采集 200 个样本后产生中断
+- 在中断中停止 ADC，设置标志位，等待下一次 TIM3 触发
+
+---
+
 ## 1. 芯片选择与工程创建
 
 1. 打开STM32CubeMX
@@ -88,7 +100,7 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - **IDLE_SHOULD_YIELD**: **Enabled**
 
 #### 内存管理 (Memory Management)
-- **TOTAL_HEAP_SIZE**: **16384** (16KB)
+- **TOTAL_HEAP_SIZE**: **32768** (32KB，增加了空间)
 - **MEMORY_ALLOCATION_SCHEME**: **heap_4** (推荐)
 
 #### 队列与信号量 (Queues and Semaphores)
@@ -126,7 +138,7 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - Number of Conversions: **7**
 - External Trigger Conversion Source: **Timer 2 Trigger Out event** (用于精确触发)
 - External Trigger Conversion Edge: **Trigger detection on the rising edge**
-- DMA Continuous Requests: **Enabled**
+- DMA Continuous Requests: **Disabled** (关键：因为用Normal模式)
 - End of Conversion Selection: **EOC single conversion**
 - Overrun behavior: **Overrun data preserved**
 - Sampling Time: **6.5 Cycles** (可根据需要调整)
@@ -159,7 +171,7 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - Number of Conversions: **7**
 - External Trigger Conversion Source: **Timer 2 Trigger Out event**
 - External Trigger Conversion Edge: **Trigger detection on the rising edge**
-- DMA Continuous Requests: **Enabled**
+- DMA Continuous Requests: **Disabled** (关键：因为用Normal模式)
 - End of Conversion Selection: **EOC single conversion**
 - Overrun behavior: **Overrun data preserved**
 - Sampling Time: **6.5 Cycles**
@@ -192,7 +204,7 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - Number of Conversions: **5**
 - External Trigger Conversion Source: **Timer 2 Trigger Out event**
 - External Trigger Conversion Edge: **Trigger detection on the rising edge**
-- DMA Continuous Requests: **Enabled**
+- DMA Continuous Requests: **Disabled** (关键：因为用Normal模式)
 - End of Conversion Selection: **EOC single conversion**
 - Overrun behavior: **Overrun data preserved**
 - Sampling Time: **6.5 Cycles**
@@ -223,7 +235,7 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - Number of Conversions: **7**
 - External Trigger Conversion Source: **Timer 2 Trigger Out event**
 - External Trigger Conversion Edge: **Trigger detection on the rising edge**
-- DMA Continuous Requests: **Enabled**
+- DMA Continuous Requests: **Disabled** (关键：因为用Normal模式)
 - End of Conversion Selection: **EOC single conversion**
 - Overrun behavior: **Overrun data preserved**
 - Sampling Time: **6.5 Cycles**
@@ -247,28 +259,32 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 
 需要为每个ADC添加DMA通道。
 
-### 4.1 DMA1 配置 (ADC1-2)
+### 5.1 DMA1 配置 (ADC1-2)
 
 点击 **Add** 按钮添加：
 
 | DMA Request | Stream | Direction | Mode | Priority |
 |------------|--------|-----------|------|----------|
-| ADC1 | DMA1_Channel1 | Peripheral To Memory | Circular | High |
-| ADC2 | DMA1_Channel2 | Peripheral To Memory | Circular | High |
+| ADC1 | DMA1_Channel1 | Peripheral To Memory | Normal | High |
+| ADC2 | DMA1_Channel2 | Peripheral To Memory | Normal | High |
 
 配置每个DMA通道：
 - Data Width: **Half Word (16-bit)** (Peripheral & Memory)
 - Increment Memory: **Enabled**
 - Increment Peripheral: **Disabled**
 
-### 4.2 DMA2 配置 (ADC3-4)
+**关键说明**：
+- Mode = **Normal**：一次传输完成后自动停止
+- 缓冲区大小要在代码中设置为：通道数 × 200 个样本
+
+### 5.2 DMA2 配置 (ADC3-4)
 
 点击 **Add** 按钮添加：
 
 | DMA Request | Stream | Direction | Mode | Priority |
 |------------|--------|-----------|------|----------|
-| ADC3 | DMA2_Channel1 | Peripheral To Memory | Circular | High |
-| ADC4 | DMA2_Channel2 | Peripheral To Memory | Circular | High |
+| ADC3 | DMA2_Channel1 | Peripheral To Memory | Normal | High |
+| ADC4 | DMA2_Channel2 | Peripheral To Memory | Normal | High |
 
 配置每个DMA通道：
 - Data Width: **Half Word (16-bit)** (Peripheral & Memory)
@@ -279,15 +295,32 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 
 ## 6. 定时器配置 (用于触发采样)
 
+### 6.1 TIM2 配置 (ADC采样触发 - 200Hz)
+
 进入 **Timers** → **TIM2**:
 
-### 6.1 TIM2 参数设置
+#### TIM2 参数设置
 - Prescaler (PSC): **0**
-- Counter Period (ARR): **339** (170MHz / 340 = 500kHz)
+- Counter Period (ARR): **849** (170MHz / 850 = 200kHz → 提供200Hz采样率)
 - Trigger Event Selection: **Update Event**
 
-### 6.2 定时器输出触发
+#### 定时器输出触发
 - Master Mode: **Update Event** (用于触发ADC)
+
+---
+
+### 6.2 TIM3 配置 (1秒周期定时)
+
+进入 **Timers** → **TIM3**:
+
+#### TIM3 参数设置
+- Prescaler (PSC): **16999** (170MHz / 17000 = 10kHz)
+- Counter Period (ARR): **9999** (10kHz / 10000 = 1Hz)
+
+#### TIM3 中断配置
+在 **NVIC Settings** 中启用：
+- ✅ TIM3 global interrupt
+- Priority: **6** (必须大于FreeRTOS的MAX_SYSCALL_INTERRUPT_PRIORITY)
 
 ---
 
@@ -382,9 +415,23 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - ✅ DMA1 channel2 global interrupt
 - ✅ DMA2 channel1 global interrupt
 - ✅ DMA2 channel2 global interrupt
+- ✅ TIM3 global interrupt (新增)
 - (可选) UART4/5 global interrupt (如需使用中断方式收发)
 
-**注意**: 当启用FreeRTOS时，确保以下中断优先级不高于 `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY` (通常设为5)
+**中断优先级设置**：
+| 中断 | 优先级 | 说明 |
+|-----|--------|------|
+| DMA1 channel1 | 6 | 必须大于configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY=5 |
+| DMA1 channel2 | 6 | 必须大于configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY=5 |
+| DMA2 channel1 | 6 | 必须大于configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY=5 |
+| DMA2 channel2 | 6 | 必须大于configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY=5 |
+| TIM3 global interrupt | 6 | 必须大于configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY=5 |
+| FDCAN2 interrupt 1 | 7 | 根据需要调整 |
+
+**重要说明**:
+- configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY = 5
+- 所有调用FreeRTOS API的中断，优先级**必须** > 5（数值越大，优先级越低）
+- 数值6、7都是安全的
 
 ---
 
@@ -403,11 +450,15 @@ HSE (假设8MHz) → /M (2) → PLL Source Mux
 - [ ] FreeRTOS已启用 (CMSIS-RTOS v2)
 - [ ] 时钟配置达到170MHz
 - [ ] 4个ADC的通道数正确 (7+7+5+7=26)
-- [ ] DMA已正确配置为循环模式
-- [ ] TIM2配置为500kHz触发
+- [ ] **DMA配置为Normal模式**（关键！不是Circular）
+- [ ] **DMA Continuous Requests = Disabled**
+- [ ] TIM2配置为200Hz触发 (ARR=849)
+- [ ] **TIM3已配置为1Hz定时**
+- [ ] TIM3中断已启用
 - [ ] FDCAN2、UART4/5参数正确
 - [ ] LED引脚PD14已配置
-- [ ] FreeRTOS堆大小设置为16KB (heap_4)
+- [ ] FreeRTOS堆大小设置为32KB (heap_4)
+- [ ] **所有DMA和TIM3中断优先级 = 6**
 
 ---
 
