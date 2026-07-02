@@ -95,8 +95,8 @@ void Error_Handler(void);
 #define ADC_CUR9_GPIO_Port GPIOE
 #define ADC_VS10_Pin GPIO_PIN_9
 #define ADC_VS10_GPIO_Port GPIOE
-#define ADC_VS10E10_Pin GPIO_PIN_10
-#define ADC_VS10E10_GPIO_Port GPIOE
+#define ADC_CUR10_Pin GPIO_PIN_10
+#define ADC_CUR10_GPIO_Port GPIOE
 #define ADC_VS11_Pin GPIO_PIN_11
 #define ADC_VS11_GPIO_Port GPIOE
 #define ADC_CUR11_Pin GPIO_PIN_12

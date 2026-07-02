@@ -143,7 +143,7 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
     /*
      * ADC4通道映射 (7通道):
      * Rank1-IN6-PE8   -> CUR9
-     * Rank2-IN14-PE10 -> VS10 (备用)
+     * Rank2-IN14-PE10 -> CUR10
      * Rank3-IN15-PE11 -> VS11
      * Rank4-IN16-PE12 -> CUR11
      * Rank5-IN1-PE14  -> CUR12
@@ -152,9 +152,8 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
      */
     if (adc_data.cur[8].write_index < SAMPLES_PER_CHANNEL)
         adc_data.cur[8].samples[adc_data.cur[8].write_index++] = raw_data->adc4_data[0];
-    /* PE10暂存到VS10备用 */
-    if (adc_data.vs[10].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[10].samples[adc_data.vs[10].write_index++] = raw_data->adc4_data[1];
+    if (adc_data.cur[9].write_index < SAMPLES_PER_CHANNEL)
+        adc_data.cur[9].samples[adc_data.cur[9].write_index++] = raw_data->adc4_data[1];
     if (adc_data.vs[10].write_index < SAMPLES_PER_CHANNEL)
         adc_data.vs[10].samples[adc_data.vs[10].write_index++] = raw_data->adc4_data[2];
     if (adc_data.cur[10].write_index < SAMPLES_PER_CHANNEL)

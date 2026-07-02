@@ -6,6 +6,7 @@
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "test_bsp.h"
 #include "bsp_adc.h"
+#include "bsp_can.h"
 #include "data_process.h"
 #include <stdio.h>
 #include <string.h>
@@ -44,6 +45,10 @@ void Test_Run(void)
 #if (TEST_ENABLE_DATA_PROCESS)
     Test_DataProcess_Sort();
     Test_DataProcess_Average();
+#endif
+
+#if (TEST_ENABLE_CAN)
+    Test_CAN_Basic();
 #endif
 
     printf("\r\n========================================\r\n");
@@ -190,6 +195,87 @@ void Test_DataProcess_Average(void)
     } else {
         printf("  [FAIL] Average Test Failed\r\n");
     }
+}
+#endif
+
+#if (TEST_ENABLE_CAN)
+/**
+ * @brief  接收并打印一帧CAN数据
+ * @param  None
+ * @retval 1=收到数据，0=未收到
+ */
+static uint8_t Test_CAN_ReceiveAndPrint(void)
+{
+    FDCAN_RxHeaderTypeDef RxHeader;
+    uint8_t RxData[8];
+    
+    if (HAL_FDCAN_GetRxMessage(&hfdcan2, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
+        printf("    [RX] ID=0x%03lX, DLC=%lu, Data=", 
+               RxHeader.Identifier, RxHeader.DataLength);
+        for (uint8_t i = 0; i < RxHeader.DataLength; i++) {
+            printf("%02X ", RxData[i]);
+        }
+        printf("\r\n");
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief  CAN回环测试
+ */
+void Test_CAN_Basic(void)
+{
+    printf("\r\n[TEST] CAN Loopback Test\r\n");
+    
+    CAN_Status_t status;
+    ResultData_t testResult;
+    
+    /* 填充测试数据 */
+    for (int i = 0; i < 12; i++) {
+        testResult.voltage[i] = 1.23f + i * 0.1f;
+        testResult.current[i] = 0.56f + i * 0.05f;
+    }
+    testResult.temperature[0] = 25.5f;
+    testResult.temperature[1] = 30.2f;
+    
+    printf("  Enabling internal loopback mode...\r\n");
+    BSP_CAN_EnableLoopback();
+    
+    printf("  Sending test data (14 frames)...\r\n");
+    status = BSP_CAN_SendData(&testResult);
+    
+    if (status == CAN_OK) {
+        printf("  [OK] Data sent successfully\r\n");
+        
+        /* 等待并接收数据 */
+        printf("  Waiting for received frames:\r\n");
+        uint32_t timeout = 0xFFFF;
+        uint8_t receivedCount = 0;
+        
+        while (timeout-- > 0) {
+            if (Test_CAN_ReceiveAndPrint()) {
+                receivedCount++;
+            }
+            
+            if (receivedCount >= 14) {
+                break;
+            }
+        }
+        
+        printf("  Received %d frames\r\n", receivedCount);
+        
+        if (receivedCount == 14) {
+            printf("  [PASS] CAN Loopback Test OK\r\n");
+        } else {
+            printf("  [WARN] Expected 14 frames, got %d\r\n", receivedCount);
+        }
+    } else {
+        printf("  [FAIL] CAN Send Failed (status=%d)\r\n", status);
+    }
+    
+    printf("  Disabling loopback mode...\r\n");
+    BSP_CAN_DisableLoopback();
 }
 #endif
 

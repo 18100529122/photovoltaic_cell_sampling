@@ -62,6 +62,13 @@ typedef struct {
     uint8_t data_ready;                             /* 1s数据准备好标志 */
 } ADC_Data_t;
 
+/* CAN发送结果数据结构体 */
+typedef struct {
+    float voltage[ADC_CH_VOLTAGE_COUNT];            /* 12路电压数据 */
+    float current[ADC_CH_CURRENT_COUNT];            /* 12路电流数据 */
+    float temperature[ADC_CH_TEMP_COUNT];           /* 2路温度数据 */
+} ResultData_t;
+
 /*========================= 全局变量 (Global Variables) ====================*/
 
 /*========================= 函数声明 (Function Declarations) ===============*/

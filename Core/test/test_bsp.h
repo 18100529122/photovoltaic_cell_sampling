@@ -18,11 +18,13 @@ extern "C" {
 #define TEST_ENABLE_ADC           1    /* ADC测试 */
 #define TEST_ENABLE_DATA_PROCESS  1    /* 数据处理测试 */
 #define TEST_ENABLE_UART          1    /* 串口测试 */
+#define TEST_ENABLE_CAN           1    /* CAN测试 */
 #else
 /* 测试总开关关闭 */
 #define TEST_ENABLE_ADC           0    /* ADC测试 */
 #define TEST_ENABLE_DATA_PROCESS  0    /* 数据处理测试 */
 #define TEST_ENABLE_UART          0    /* 串口测试 */
+#define TEST_ENABLE_CAN           0    /* CAN测试 */
 #endif
 
 /*========================= 类型定义 (Typedefs) ============================*/
@@ -45,6 +47,10 @@ void Test_DataProcess_Average(void);
 
 #if (TEST_ENABLE_UART)
 void Test_UART_Printf(void);
+#endif
+
+#if (TEST_ENABLE_CAN)
+void Test_CAN_Basic(void);
 #endif
 
 #ifdef __cplusplus
