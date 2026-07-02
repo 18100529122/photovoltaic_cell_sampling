@@ -7,6 +7,7 @@
 #include "bsp_adc.h"
 #include "adc.h"
 #include "tim.h"
+#include <stdio.h>
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -35,14 +36,32 @@ void BSP_ADC_Init(void)
  */
 void BSP_ADC_Start(void)
 {
-    /* 启动4个ADC的DMA采集 */
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_raw_data.adc1_data, ADC1_CH_COUNT);
-    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_raw_data.adc2_data, ADC2_CH_COUNT);
-    HAL_ADC_Start_DMA(&hadc3, (uint32_t*)adc_raw_data.adc3_data, ADC3_CH_COUNT);
-    HAL_ADC_Start_DMA(&hadc4, (uint32_t*)adc_raw_data.adc4_data, ADC4_CH_COUNT);
+  HAL_StatusTypeDef status;
 
-    /* 启动TIM2触发源 */
-    HAL_TIM_Base_Start(&htim2);
+  status = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_raw_data.adc1_data, ADC1_CH_COUNT);
+  if (status != HAL_OK) {
+    Error_Handler();
+  }
+
+  status = HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_raw_data.adc2_data, ADC2_CH_COUNT);
+  if (status != HAL_OK) {
+    Error_Handler();
+  }
+
+  status = HAL_ADC_Start_DMA(&hadc3, (uint32_t*)adc_raw_data.adc3_data, ADC3_CH_COUNT);
+  if (status != HAL_OK) {
+    Error_Handler();
+  }
+
+  status = HAL_ADC_Start_DMA(&hadc4, (uint32_t*)adc_raw_data.adc4_data, ADC4_CH_COUNT);
+  if (status != HAL_OK) {
+    Error_Handler();
+  }
+
+  status = HAL_TIM_Base_Start(&htim2);
+  if (status != HAL_OK) {
+    Error_Handler();
+  }
 }
 
 /**

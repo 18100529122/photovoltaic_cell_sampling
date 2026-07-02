@@ -92,7 +92,17 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
+  // 保存故障寄存器供调试
+  volatile uint32_t cfsr, hfsr, dfsr, afsr, bfar;
+  __asm volatile
+  (
+    "TST lr, #4\n"
+    "ITE EQ\n"
+    "MRSEQ r0, MSP\n"
+    "MRSNE r0, PSP\n"
+    "B hardfault_handler_c\n"
+    : : : "r0"
+  );
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -279,5 +289,31 @@ void FDCAN2_IT1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+// 添加C语言的HardFault处理函数
+void hardfault_handler_c(uint32_t *stack)
+{
+  // 从栈中读取故障寄存器
+  volatile uint32_t r0  = stack[0];
+  volatile uint32_t r1  = stack[1];
+  volatile uint32_t r2  = stack[2];
+  volatile uint32_t r3  = stack[3];
+  volatile uint32_t r12 = stack[4];
+  volatile uint32_t lr  = stack[5];  // Link Register
+  volatile uint32_t pc  = stack[6];  // Program Counter (fault address!)
+  volatile uint32_t psr = stack[7];  // Program Status Register
+  
+  // 读取故障状态寄存器
+  volatile uint32_t cfsr  = *(volatile uint32_t *)0xE000ED28;
+  volatile uint32_t hfsr  = *(volatile uint32_t *)0xE000ED2C;
+  volatile uint32_t dfsr  = *(volatile uint32_t *)0xE000ED30;
+  volatile uint32_t afsr  = *(volatile uint32_t *)0xE000ED3C;
+  volatile uint32_t bfar  = *(volatile uint32_t *)0xE000ED38;
+  volatile uint32_t mmar  = *(volatile uint32_t *)0xE000ED34;
+  
+  // 在这里设置断点调试
+  (void)cfsr; (void)hfsr; (void)dfsr; (void)afsr; (void)bfar; (void)mmar;
+  (void)r0; (void)r1; (void)r2; (void)r3; (void)r12; (void)lr; (void)pc; (void)psr;
+  
+  while(1);
+}
 /* USER CODE END 1 */

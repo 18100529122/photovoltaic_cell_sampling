@@ -30,16 +30,18 @@
  */
 void Test_Run(void)
 {
-    printf("\r\n========================================\r\n");
-    printf("  BSP Test Suite\r\n");
-    printf("========================================\r\n");
+     printf("\r\n========================================\r\n");
+     printf("  BSP Test Suite\r\n");
+     printf("========================================\r\n");
 
 #if (TEST_ENABLE_UART)
     Test_UART_Printf();
 #endif
 
 #if (TEST_ENABLE_ADC)
+    // BSP_ADC_Start();
     Test_ADC_RawData();
+    // BSP_ADC_Stop();
 #endif
 
 #if (TEST_ENABLE_DATA_PROCESS)

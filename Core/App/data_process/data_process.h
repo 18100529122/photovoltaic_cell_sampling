@@ -23,6 +23,11 @@ extern ADC_Data_t adc_data;  /* ADC数据结构 */
 
 /*========================= 函数声明 (Function Declarations) ===============*/
 /**
+ * @brief  数据处理任务入口（原生FreeRTOS）
+ */
+void app_data_process_task(void *argument);
+
+/**
  * @brief  数据处理模块初始化
  */
 void DataProcess_Init(void);

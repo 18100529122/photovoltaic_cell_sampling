@@ -6,6 +6,9 @@
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "data_process.h"
 #include "bsp_adc.h"
+#include "usart.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -17,12 +20,7 @@
 ADC_Data_t adc_data;  /* ADC数据结构 */
 
 /*========================= 静态变量 (Static Variables) ====================*/
-static osThreadId_t dataProcessTaskHandle;  /* 数据处理任务句柄 */
-const osThreadAttr_t dataProcessTask_attributes = {
-  .name = "dataProcessTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 512 * 4
-};
+TaskHandle_t dataProcessTaskHandle = NULL;  /* 数据处理任务句柄（原生FreeRTOS） */
 
 /*========================= 静态函数声明 (Static Function Declarations) ====*/
 /**
@@ -33,9 +31,9 @@ const osThreadAttr_t dataProcessTask_attributes = {
 static void sort_data(uint16_t* data, uint16_t len);
 
 /**
- * @brief  数据处理任务
+ * @brief  数据处理任务（原生FreeRTOS）
  */
-static void DataProcess_TaskEntry(void *argument);
+void app_data_process_task(void *argument);
 
 /*========================= 函数实现 (Function Definitions) ================*/
 /**
@@ -44,24 +42,37 @@ static void DataProcess_TaskEntry(void *argument);
 void DataProcess_Init(void)
 {
     memset(&adc_data, 0, sizeof(ADC_Data_t));
-
-    /* 创建数据处理任务 */
-    dataProcessTaskHandle = osThreadNew(DataProcess_TaskEntry, NULL, &dataProcessTask_attributes);
+    printf("DataProcess_Init - mem clear complete\r\n");
+    /* 创建数据处理任务（使用FreeRTOS原生优先级，减小栈大小避免堆溢出） */
+    BaseType_t ret = xTaskCreate(app_data_process_task, 
+                                 "adc_process", 
+                                 4096,  /* 减小栈大小从4096到1024 */
+                                 NULL, 
+                                 tskIDLE_PRIORITY + 2,  /* 中等偏上优先级 */
+                                 NULL);
+    if (ret != pdPASS) {
+        printf("Failed to create adc_process task! Error: %ld\r\n", ret);
+    } else {
+        printf("adc_process task created successfully!\r\n");
+    }
 }
 
 /**
- * @brief  数据处理任务入口
+ * @brief  数据处理任务入口（原生FreeRTOS）
  */
-static void DataProcess_TaskEntry(void *argument)
+void app_data_process_task(void *argument)
 {
+    printf("app_data_process_task starting...\r\n");
     
     /* 启动ADC采集 */
+    printf("Starting ADC...\r\n");
     BSP_ADC_Start();
+    printf("ADC started!\r\n");
 
-    for(;;)
+    while (1)
     {
         DataProcess_Task();
-        osDelay(1);
+        osDelay(500);
     }
 }
 
@@ -287,24 +298,6 @@ void DataProcess_Task(void)
         {
             /* 处理所有通道数据 */
             DataProcess_ProcessAll();
-
-            /* 打印处理后的结果（调试用） */
-            printf("=== Data Processed ===\r\n");
-
-            printf("Voltage:\r\n");
-            for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
-                printf("  VS%d: %.2f\r\n", i + 1, adc_data->vs_result[i]);
-            }
-
-            printf("Current:\r\n");
-            for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
-                printf("  CUR%d: %.2f\r\n", i + 1, adc_data->cur_result[i]);
-            }
-
-            printf("Temperature:\r\n");
-            for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
-                printf("  TEMP%d: %.2f\r\n", i + 1, adc_data->temp_result[i]);
-            }
         }
     }
 }
