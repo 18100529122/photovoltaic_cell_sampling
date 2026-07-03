@@ -18,7 +18,11 @@ extern "C" {
 /*========================= 类型定义 (Typedefs) ============================*/
 
 /*========================= 全局变量 (Global Variables) ====================*/
-extern volatile uint8_t adc_conv_complete;  /* ADC转换完成标志 */
+extern volatile uint8_t adc1_conv_complete;  /* ADC1转换完成标志 */
+extern volatile uint8_t adc2_conv_complete;  /* ADC2转换完成标志 */
+extern volatile uint8_t adc3_conv_complete;  /* ADC3转换完成标志 */
+extern volatile uint8_t adc4_conv_complete;  /* ADC4转换完成标志 */
+extern volatile uint8_t all_adc_conv_complete;  /* 所有ADC转换完成标志 */
 
 /*========================= 函数声明 (Function Declarations) ===============*/
 /**
@@ -41,11 +45,6 @@ void BSP_ADC_Stop(void);
  * @return ADC原始数据指针
  */
 ADC_RawData_t* BSP_ADC_GetRawData(void);
-
-/**
- * @brief  ADC转换完成回调（DMA半传输和传输完成）
- */
-void BSP_ADC_ConvCpltCallback(void);
 
 #ifdef __cplusplus
 }

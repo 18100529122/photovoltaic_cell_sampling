@@ -33,10 +33,10 @@ extern "C" {
 /*========================= 类型定义 (Typedefs) ============================*/
 /* ADC原始数据结构体 - DMA缓冲区 */
 typedef struct {
-    uint16_t adc1_data[ADC1_CH_COUNT];    /* ADC1数据 */
-    uint16_t adc2_data[ADC2_CH_COUNT];    /* ADC2数据 */
-    uint16_t adc3_data[ADC3_CH_COUNT];    /* ADC3数据 */
-    uint16_t adc4_data[ADC4_CH_COUNT];    /* ADC4数据 */
+    uint16_t adc1_data[ADC1_CH_COUNT * SAMPLES_PER_CHANNEL];    /* ADC1数据: 通道数 × 200 */
+    uint16_t adc2_data[ADC2_CH_COUNT * SAMPLES_PER_CHANNEL];    /* ADC2数据: 通道数 × 200 */
+    uint16_t adc3_data[ADC3_CH_COUNT * SAMPLES_PER_CHANNEL];    /* ADC3数据: 通道数 × 200 */
+    uint16_t adc4_data[ADC4_CH_COUNT * SAMPLES_PER_CHANNEL];    /* ADC4数据: 通道数 × 200 */
 } ADC_RawData_t;
 
 /* 采样点缓冲区结构体 */

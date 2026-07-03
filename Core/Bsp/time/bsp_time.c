@@ -1,14 +1,12 @@
 /**
- * @file     app.c
- * @brief    应用层整合实现
+ * @file     bsp_time.c
+ * @brief    定时器驱动实现
  */
 
 /*========================= 头文件包含 (Includes) ==========================*/
-#include "app.h"
-#include "bsp_adc.h"
-#include "data_process.h"
+#include "bsp_time.h"
 #include "tim.h"
-#include <stdio.h>
+#include "bsp_adc.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -22,16 +20,20 @@
 
 /*========================= 函数实现 (Function Definitions) ================*/
 /**
- * @brief  应用层初始化
+ * @brief  TIM3中断处理函数
  */
-void App_Init(void)
+void BSP_TIM3_IRQHandler(void)
 {
-    BSP_ADC_Init();
-    DataProcess_Init();
-
-    printf("App Init Complete\r\n");
-
-    /* 启动TIM3，每秒触发一次ADC采集 */
-    HAL_TIM_Base_Start_IT(&htim3);
+  // 检查更新中断标志
+  if (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET)
+  {
+    if (__HAL_TIM_GET_IT_SOURCE(&htim3, TIM_IT_UPDATE) != RESET)
+    {
+      // 清除中断标志
+      __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
+      
+      // 每秒启动一次ADC采集
+      BSP_ADC_Start();
+    }
+  }
 }
-

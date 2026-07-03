@@ -43,12 +43,12 @@ void DataProcess_Init(void)
 {
     memset(&adc_data, 0, sizeof(ADC_Data_t));
     printf("DataProcess_Init - mem clear complete\r\n");
-    /* 创建数据处理任务（使用FreeRTOS原生优先级，减小栈大小避免堆溢出） */
+    /* 创建数据处理任务（使用FreeRTOS原生优先级） */
     BaseType_t ret = xTaskCreate(app_data_process_task, 
                                  "adc_process", 
-                                 4096,  /* 减小栈大小从4096到1024 */
+                                 4096, 
                                  NULL, 
-                                 tskIDLE_PRIORITY + 2,  /* 中等偏上优先级 */
+                                 tskIDLE_PRIORITY + 2, 
                                  NULL);
     if (ret != pdPASS) {
         printf("Failed to create adc_process task! Error: %ld\r\n", ret);
@@ -63,21 +63,16 @@ void DataProcess_Init(void)
 void app_data_process_task(void *argument)
 {
     printf("app_data_process_task starting...\r\n");
-    
-    /* 启动ADC采集 */
-    printf("Starting ADC...\r\n");
-    BSP_ADC_Start();
-    printf("ADC started!\r\n");
 
     while (1)
     {
         DataProcess_Task();
-        osDelay(500);
+        osDelay(10);
     }
 }
 
 /**
- * @brief  将ADC原始数据映射到对应通道
+ * @brief  将ADC原始数据映射到对应通道（一次性处理200个采样点
  * @param  raw_data ADC原始数据指针
  */
 void DataProcess_MapRawData(ADC_RawData_t* raw_data)
@@ -91,21 +86,25 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
      * Rank5-IN6-PC0  -> VS1
      * Rank6-IN7-PC1  -> CUR1
      * Rank7-IN8-PC2  -> VS2
+     * DMA数据布局: [Ch0_Sample0, Ch1_Sample0, ..., Ch6_Sample0, Ch0_Sample1, Ch1_Sample1, ...]
      */
-    if (adc_data.vs[2].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[2].samples[adc_data.vs[2].write_index++] = raw_data->adc1_data[0];
-    if (adc_data.cur[2].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[2].samples[adc_data.cur[2].write_index++] = raw_data->adc1_data[1];
-    if (adc_data.vs[3].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[3].samples[adc_data.vs[3].write_index++] = raw_data->adc1_data[2];
-    if (adc_data.cur[3].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[3].samples[adc_data.cur[3].write_index++] = raw_data->adc1_data[3];
-    if (adc_data.vs[0].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[0].samples[adc_data.vs[0].write_index++] = raw_data->adc1_data[4];
-    if (adc_data.cur[0].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[0].samples[adc_data.cur[0].write_index++] = raw_data->adc1_data[5];
-    if (adc_data.vs[1].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[1].samples[adc_data.vs[1].write_index++] = raw_data->adc1_data[6];
+    for (uint16_t sample = 0; sample < SAMPLES_PER_CHANNEL; sample++) {
+        uint16_t base_idx = sample * ADC1_CH_COUNT;
+        adc_data.vs[2].samples[sample] = raw_data->adc1_data[base_idx + 0];
+        adc_data.cur[2].samples[sample] = raw_data->adc1_data[base_idx + 1];
+        adc_data.vs[3].samples[sample] = raw_data->adc1_data[base_idx + 2];
+        adc_data.cur[3].samples[sample] = raw_data->adc1_data[base_idx + 3];
+        adc_data.vs[0].samples[sample] = raw_data->adc1_data[base_idx + 4];
+        adc_data.cur[0].samples[sample] = raw_data->adc1_data[base_idx + 5];
+        adc_data.vs[1].samples[sample] = raw_data->adc1_data[base_idx + 6];
+    }
+    adc_data.vs[2].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[2].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[3].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[3].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[0].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[0].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[1].write_index = SAMPLES_PER_CHANNEL;
 
     /*
      * ADC2通道映射 (7通道):
@@ -117,20 +116,23 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
      * Rank6-IN5-PC4   -> VS7
      * Rank7-IN11-PC5  -> CUR7
      */
-    if (adc_data.vs[4].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[4].samples[adc_data.vs[4].write_index++] = raw_data->adc2_data[0];
-    if (adc_data.cur[4].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[4].samples[adc_data.cur[4].write_index++] = raw_data->adc2_data[1];
-    if (adc_data.vs[5].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[5].samples[adc_data.vs[5].write_index++] = raw_data->adc2_data[2];
-    if (adc_data.cur[5].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[5].samples[adc_data.cur[5].write_index++] = raw_data->adc2_data[3];
-    if (adc_data.cur[1].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[1].samples[adc_data.cur[1].write_index++] = raw_data->adc2_data[4];
-    if (adc_data.vs[6].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[6].samples[adc_data.vs[6].write_index++] = raw_data->adc2_data[5];
-    if (adc_data.cur[6].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[6].samples[adc_data.cur[6].write_index++] = raw_data->adc2_data[6];
+    for (uint16_t sample = 0; sample < SAMPLES_PER_CHANNEL; sample++) {
+        uint16_t base_idx = sample * ADC2_CH_COUNT;
+        adc_data.vs[4].samples[sample] = raw_data->adc2_data[base_idx + 0];
+        adc_data.cur[4].samples[sample] = raw_data->adc2_data[base_idx + 1];
+        adc_data.vs[5].samples[sample] = raw_data->adc2_data[base_idx + 2];
+        adc_data.cur[5].samples[sample] = raw_data->adc2_data[base_idx + 3];
+        adc_data.cur[1].samples[sample] = raw_data->adc2_data[base_idx + 4];
+        adc_data.vs[6].samples[sample] = raw_data->adc2_data[base_idx + 5];
+        adc_data.cur[6].samples[sample] = raw_data->adc2_data[base_idx + 6];
+    }
+    adc_data.vs[4].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[4].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[5].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[5].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[1].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[6].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[6].write_index = SAMPLES_PER_CHANNEL;
 
     /*
      * ADC3通道映射 (5通道):
@@ -140,16 +142,19 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
      * Rank4-IN2-PE9   -> VS10
      * Rank5-IN3-PE13  -> VS12
      */
-    if (adc_data.vs[7].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[7].samples[adc_data.vs[7].write_index++] = raw_data->adc3_data[0];
-    if (adc_data.cur[7].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[7].samples[adc_data.cur[7].write_index++] = raw_data->adc3_data[1];
-    if (adc_data.vs[8].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[8].samples[adc_data.vs[8].write_index++] = raw_data->adc3_data[2];
-    if (adc_data.vs[9].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[9].samples[adc_data.vs[9].write_index++] = raw_data->adc3_data[3];
-    if (adc_data.vs[11].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[11].samples[adc_data.vs[11].write_index++] = raw_data->adc3_data[4];
+    for (uint16_t sample = 0; sample < SAMPLES_PER_CHANNEL; sample++) {
+        uint16_t base_idx = sample * ADC3_CH_COUNT;
+        adc_data.vs[7].samples[sample] = raw_data->adc3_data[base_idx + 0];
+        adc_data.cur[7].samples[sample] = raw_data->adc3_data[base_idx + 1];
+        adc_data.vs[8].samples[sample] = raw_data->adc3_data[base_idx + 2];
+        adc_data.vs[9].samples[sample] = raw_data->adc3_data[base_idx + 3];
+        adc_data.vs[11].samples[sample] = raw_data->adc3_data[base_idx + 4];
+    }
+    adc_data.vs[7].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[7].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[8].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[9].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[11].write_index = SAMPLES_PER_CHANNEL;
 
     /*
      * ADC4通道映射 (7通道):
@@ -161,36 +166,35 @@ void DataProcess_MapRawData(ADC_RawData_t* raw_data)
      * Rank6-IN4-PB14  -> TEMP2
      * Rank7-IN5-PB15  -> TEMP1
      */
-    if (adc_data.cur[8].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[8].samples[adc_data.cur[8].write_index++] = raw_data->adc4_data[0];
-    if (adc_data.cur[9].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[9].samples[adc_data.cur[9].write_index++] = raw_data->adc4_data[1];
-    if (adc_data.vs[10].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.vs[10].samples[adc_data.vs[10].write_index++] = raw_data->adc4_data[2];
-    if (adc_data.cur[10].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[10].samples[adc_data.cur[10].write_index++] = raw_data->adc4_data[3];
-    if (adc_data.cur[11].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.cur[11].samples[adc_data.cur[11].write_index++] = raw_data->adc4_data[4];
-    if (adc_data.temp[1].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.temp[1].samples[adc_data.temp[1].write_index++] = raw_data->adc4_data[5];
-    if (adc_data.temp[0].write_index < SAMPLES_PER_CHANNEL)
-        adc_data.temp[0].samples[adc_data.temp[0].write_index++] = raw_data->adc4_data[6];
+    for (uint16_t sample = 0; sample < SAMPLES_PER_CHANNEL; sample++) {
+        uint16_t base_idx = sample * ADC4_CH_COUNT;
+        adc_data.cur[8].samples[sample] = raw_data->adc4_data[base_idx + 0];
+        adc_data.cur[9].samples[sample] = raw_data->adc4_data[base_idx + 1];
+        adc_data.vs[10].samples[sample] = raw_data->adc4_data[base_idx + 2];
+        adc_data.cur[10].samples[sample] = raw_data->adc4_data[base_idx + 3];
+        adc_data.cur[11].samples[sample] = raw_data->adc4_data[base_idx + 4];
+        adc_data.temp[1].samples[sample] = raw_data->adc4_data[base_idx + 5];
+        adc_data.temp[0].samples[sample] = raw_data->adc4_data[base_idx + 6];
+    }
+    adc_data.cur[8].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[9].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.vs[10].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[10].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.cur[11].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.temp[1].write_index = SAMPLES_PER_CHANNEL;
+    adc_data.temp[0].write_index = SAMPLES_PER_CHANNEL;
 
-    /* 检查是否所有通道都采集满200个点 */
-    uint8_t all_full = 1;
+    /* 所有通道都已采集满200个点 */
     for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
-        if (adc_data.vs[i].write_index < SAMPLES_PER_CHANNEL) all_full = 0;
-        else adc_data.vs[i].buffer_full = 1;
+        adc_data.vs[i].buffer_full = 1;
     }
     for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
-        if (adc_data.cur[i].write_index < SAMPLES_PER_CHANNEL) all_full = 0;
-        else adc_data.cur[i].buffer_full = 1;
+        adc_data.cur[i].buffer_full = 1;
     }
     for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
-        if (adc_data.temp[i].write_index < SAMPLES_PER_CHANNEL) all_full = 0;
-        else adc_data.temp[i].buffer_full = 1;
+        adc_data.temp[i].buffer_full = 1;
     }
-    adc_data.data_ready = all_full;
+    adc_data.data_ready = 1;
 }
 
 /**
@@ -284,21 +288,34 @@ ADC_Data_t* DataProcess_GetData(void)
  */
 void DataProcess_Task(void)
 {
-    if (adc_conv_complete)
+    if (all_adc_conv_complete)
     {
-        adc_conv_complete = 0;
+        all_adc_conv_complete = 0;
 
         /* 映射ADC原始数据到对应通道 */
         ADC_RawData_t* raw_data = BSP_ADC_GetRawData();
         DataProcess_MapRawData(raw_data);
 
-        /* 检查是否有1秒数据完成 */
-        ADC_Data_t* adc_data = DataProcess_GetData();
-        if (adc_data->data_ready)
-        {
-            /* 处理所有通道数据 */
-            DataProcess_ProcessAll();
+        /* 处理所有通道数据 */
+        DataProcess_ProcessAll();
+
+        /* 打印测试 打印所有处理后的数据  */
+        printf("-----------------\n");
+        printf("adc_data.vs_result: ");
+        for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+            printf("%.2f ", adc_data.vs_result[i]);
         }
+        printf("\n");
+        printf("adc_data.cur_result: ");
+        for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+            printf("%.2f ", adc_data.cur_result[i]);
+        }
+        printf("\n");
+        printf("adc_data.temp_result: ");
+        for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+            printf("%.2f ", adc_data.temp_result[i]);
+        }
+        printf("\n");
     }
 }
 
