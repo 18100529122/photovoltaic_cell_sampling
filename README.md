@@ -80,7 +80,8 @@ photovoltaic_cell_sampling/
 5. **FreeRTOS多任务** - LED闪烁任务
 6. **CAN通信驱动** - 完整的复帧传输协议（首帧+中间帧+末帧），支持106字节数据传输，回环测试验证通过 ✅
 7. **Letter Shell 移植** - 命令行 shell 移植完成，支持命令交互 ✅
-8. **BSP测试套件** - ADC测试、数据处理测试、UART测试、CAN回环测试
+8. **Flash存储驱动** - 支持16KB数据区（0x0807C000）读写擦除，双Bank正确处理 ✅
+9. **BSP测试套件** - ADC测试、数据处理测试、UART测试、CAN回环测试、Flash读写测试 ✅
 
 ### CAN通信协议
 
@@ -172,11 +173,10 @@ user:/$ help
 ```
 
 ### 待实现（TODO）
-1. Flash参数存储 - 存储26通道的kb值
+1. Flash参数存储应用层 - 封装Flash驱动，实现26通道kb值的存取
 2. 主从机通信功能完善
 3. 数值与真实值校准
-4. 移植shell
-5. UART5心跳包
+4. UART5心跳包
 
 详见 `TODO.md`。
 
