@@ -224,14 +224,67 @@ static uint8_t Test_CAN_ReceiveAndPrint(void)
 }
 
 /**
+ * @brief  发送单帧并同时接收
+ */
+static CAN_Status_t Test_SendAndReceive(uint32_t id, const uint8_t *data, uint8_t len, uint8_t *rxCount)
+{
+    FDCAN_TxHeaderTypeDef TxHeader;
+    uint32_t timeout;
+    
+    /* 配置 Tx Header */
+    TxHeader.Identifier = id;
+    TxHeader.IdType = FDCAN_STANDARD_ID;
+    TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+    TxHeader.DataLength = len;
+    TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+    TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+    TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    TxHeader.MessageMarker = 0;
+    
+    /* 等待发送缓冲区可用 */
+    timeout = 0xFFFF;
+    while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan2) == 0) {
+        /* 等待时顺便接收 */
+        if (Test_CAN_ReceiveAndPrint()) {
+            (*rxCount)++;
+        }
+        if (--timeout == 0) {
+            return CAN_TIMEOUT;
+        }
+    }
+    
+    /* 发送数据 */
+    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, (uint8_t*)data) != HAL_OK) {
+        return CAN_ERROR;
+    }
+    
+    /* 发送后等待并接收 */
+    timeout = 0xFFFF;
+    while (timeout-- > 0) {
+        if (Test_CAN_ReceiveAndPrint()) {
+            (*rxCount)++;
+            break;
+        }
+    }
+    
+    return CAN_OK;
+}
+
+/**
  * @brief  CAN回环测试
  */
 void Test_CAN_Basic(void)
 {
     printf("\r\n[TEST] CAN Loopback Test\r\n");
     
-    CAN_Status_t status;
     ResultData_t testResult;
+    uint8_t appData[CAN_APP_DATA_LEN];
+    uint8_t frameData[8];
+    uint16_t offset = 0;
+    uint8_t checksum;
+    uint8_t receivedCount = 0;
+    CAN_Status_t status;
     
     /* 填充测试数据 */
     for (int i = 0; i < 12; i++) {
@@ -241,41 +294,71 @@ void Test_CAN_Basic(void)
     testResult.temperature[0] = 25.5f;
     testResult.temperature[1] = 30.2f;
     
+    /* 打包数据 */
+    appData[0] = 0xA5;
+    appData[1] = 0x5A;
+    memcpy(&appData[2], testResult.voltage, 12 * sizeof(float));
+    memcpy(&appData[50], testResult.current, 12 * sizeof(float));
+    memcpy(&appData[98], testResult.temperature, 2 * sizeof(float));
+    
     printf("  Enabling internal loopback mode...\r\n");
     BSP_CAN_EnableLoopback();
     
-    printf("  Sending test data (14 frames)...\r\n");
-    status = BSP_CAN_SendData(&testResult);
+    printf("  Sending & receiving test data (14 frames)...\r\n");
     
-    if (status == CAN_OK) {
-        printf("  [OK] Data sent successfully\r\n");
-        
-        /* 等待并接收数据 */
-        printf("  Waiting for received frames:\r\n");
-        uint32_t timeout = 0xFFFF;
-        uint8_t receivedCount = 0;
-        
-        while (timeout-- > 0) {
-            if (Test_CAN_ReceiveAndPrint()) {
-                receivedCount++;
-            }
-            
-            if (receivedCount >= 14) {
-                break;
-            }
-        }
-        
-        printf("  Received %d frames\r\n", receivedCount);
-        
-        if (receivedCount == 14) {
-            printf("  [PASS] CAN Loopback Test OK\r\n");
-        } else {
-            printf("  [WARN] Expected 14 frames, got %d\r\n", receivedCount);
-        }
-    } else {
-        printf("  [FAIL] CAN Send Failed (status=%d)\r\n", status);
+    /* 首帧 */
+    frameData[0] = (CAN_APP_DATA_LEN >> 8) & 0xFF;
+    frameData[1] = CAN_APP_DATA_LEN & 0xFF;
+    memcpy(&frameData[2], &appData[offset], 6);
+    offset += 6;
+    status = Test_SendAndReceive(CAN_BUILD_ID(CAN_FIRST_FRAME), frameData, 8, &receivedCount);
+    if (status != CAN_OK) goto error;
+    
+    /* 中间帧 */
+    while (offset + 8 < CAN_APP_DATA_LEN) {
+        memcpy(frameData, &appData[offset], 8);
+        offset += 8;
+        status = Test_SendAndReceive(CAN_BUILD_ID(CAN_MIDDLE_FRAME), frameData, 8, &receivedCount);
+        if (status != CAN_OK) goto error;
     }
     
+    /* 末帧 */
+    uint8_t remaining = CAN_APP_DATA_LEN - offset;
+    if (remaining > 0) {
+        memcpy(frameData, &appData[offset], remaining);
+    }
+    checksum = 0;
+    for (uint16_t i = 0; i < CAN_APP_DATA_LEN; i++) {
+        checksum += appData[i];
+    }
+    frameData[remaining] = checksum;
+    status = Test_SendAndReceive(CAN_BUILD_ID(CAN_LAST_FRAME), frameData, remaining + 1, &receivedCount);
+    if (status != CAN_OK) goto error;
+    
+    /* 最后再尝试接收可能剩余的帧 */
+    uint32_t timeout = 0xFFFFF;
+    while (timeout-- > 0) {
+        if (Test_CAN_ReceiveAndPrint()) {
+            receivedCount++;
+        }
+        if (receivedCount >= 14) {
+            break;
+        }
+    }
+    
+    printf("  Received %d frames\r\n", receivedCount);
+    
+    if (receivedCount == 14) {
+        printf("  [PASS] CAN Loopback Test OK\r\n");
+    } else {
+        printf("  [WARN] Expected 14 frames, got %d\r\n", receivedCount);
+    }
+    goto end;
+    
+error:
+    printf("  [FAIL] CAN Send Failed (status=%d)\r\n", status);
+    
+end:
     printf("  Disabling loopback mode...\r\n");
     BSP_CAN_DisableLoopback();
 }

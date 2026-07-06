@@ -63,12 +63,6 @@ void BSP_ADC_Start(void)
     adc3_conv_complete = 0;
     adc4_conv_complete = 0;
     all_adc_conv_complete = 0;
-    
-    /* 初始化DMA缓冲区为0xAAAA，便于调试 */
-    memset(adc_raw_data.adc1_data, 0xAA, sizeof(adc_raw_data.adc1_data));
-    memset(adc_raw_data.adc2_data, 0xAA, sizeof(adc_raw_data.adc2_data));
-    memset(adc_raw_data.adc3_data, 0xAA, sizeof(adc_raw_data.adc3_data));
-    memset(adc_raw_data.adc4_data, 0xAA, sizeof(adc_raw_data.adc4_data));
 
     /* 重置TIM2计数器 */
     __HAL_TIM_SET_COUNTER(&htim2, 0);

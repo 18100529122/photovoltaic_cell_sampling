@@ -34,17 +34,17 @@ void BSP_CAN_ConfigFilter(void)
     /* 配置标准帧过滤器，接收所有标准帧 */
     sFilterConfig.IdType = FDCAN_STANDARD_ID;
     sFilterConfig.FilterIndex = 0;
-    sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+    sFilterConfig.FilterType = FDCAN_FILTER_RANGE;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
     sFilterConfig.FilterID1 = 0x000;
-    sFilterConfig.FilterID2 = 0x000;
+    sFilterConfig.FilterID2 = 0x7FF;
     
     if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig) != HAL_OK) {
         Error_Handler();
     }
     
     /* 配置全局过滤器 */
-    if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan2, FDCAN_REJECT, FDCAN_REJECT, 
+    if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan2, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0, 
                                      FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK) {
         Error_Handler();
     }
@@ -58,7 +58,9 @@ void BSP_CAN_ConfigFilter(void)
 void BSP_CAN_EnableLoopback(void)
 {
     /* 停止 FDCAN */
-    HAL_FDCAN_Stop(&hfdcan2);
+    if (HAL_FDCAN_Stop(&hfdcan2) != HAL_OK) {
+        Error_Handler();
+    }
     
     /* 重新初始化 FDCAN 为回环模式 */
     hfdcan2.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
@@ -83,7 +85,9 @@ void BSP_CAN_EnableLoopback(void)
 void BSP_CAN_DisableLoopback(void)
 {
     /* 停止 FDCAN */
-    HAL_FDCAN_Stop(&hfdcan2);
+    if (HAL_FDCAN_Stop(&hfdcan2) != HAL_OK) {
+        Error_Handler();
+    }
     
     /* 重新初始化 FDCAN 为正常模式 */
     hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;

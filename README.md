@@ -21,10 +21,14 @@
 - CAN 2.0 经典帧格式
 - 波特率 500Kbps
 - PB12 (RX), PB13 (TX)
+- 节点地址: 30
 
 ### UART
 - **UART4**: 115200 8N1, PC10(TX)/PC11(RX) - 调试串口（printf重定向）
 - **UART5**: 115200 8N1, PC12(TX)/PD2(RX) - 心跳串口
+
+### TIM
+- **TIM3**: 1秒定时器，触发ADC采集
 
 ### GPIO
 - LED1: PD14 (高电平亮)
@@ -35,55 +39,97 @@
 
 | 任务名称 | 优先级 | 堆栈大小 | 功能描述 |
 |---------|--------|---------|---------|
-| defaultTask | Normal | 512 | LED闪烁 |
-| dataProcessTask | Normal | 2048 | 数据处理 |
+| defaultTask | Normal | 512 | LED闪烁、BSP初始化、应用层初始化 |
 
 ### 项目结构
 
 ```
 photovoltaic_cell_sampling/
 ├── Core/
-│   ├── Inc/       # 头文件
-│   ├── Src/       # 源文件
-│   ├── Bsp/       # 板级支持包
+│   ├── Inc/               # 头文件
+│   ├── Src/               # 源文件
+│   ├── Bsp/               # 板级支持包
 │   │   ├── bsp.c/h
-│   │   ├── adc/   # ADC驱动
-│   │   └── usart/ # 串口驱动
-│   ├── App/       # 应用层
+│   │   ├── adc/           # ADC驱动
+│   │   ├── can/           # CAN驱动
+│   │   ├── time/          # 定时器驱动
+│   │   └── usart/         # 串口驱动
+│   ├── App/               # 应用层
 │   │   ├── app.c/h
-│   │   └── data_process/ # 数据处理模块
-│   └── test/      # 测试代码
+│   │   └── data_process/  # 数据处理模块
+│   ├── Startup/           # 启动文件
+│   └── test/              # 测试代码
 │       ├── test_bsp.c/h
-├── Drivers/       # STM32 HAL 驱动
-└── doc/           # 文档目录
+├── Drivers/               # STM32 HAL 驱动
+├── Middlewares/           # 中间件（FreeRTOS）
+├── doc/                   # 文档目录
+│   ├── can协议/           # CAN协议文档
+│   └── ai对话/            # AI对话记录
+├── .mxproject             # STM32CubeMX 项目文件
+├── .ioc                   # STM32CubeMX 配置文件
+└── README.md              # 本文档
 ```
 
 ## 功能说明
 
 ### 已实现
 1. **数据结构定义** - 26通道数据结构，包含12路电压、12路电流、2路温度
-2. **ADC+DMA驱动** - 4个ADC通过DMA采集数据
-3. **数据处理算法** - 每通道200点采集，去掉10个最大/最小值，计算平均值
+2. **ADC+DMA驱动** - 4个ADC通过DMA采集数据，每通道200点采样
+3. **数据处理算法** - 每通道200点采集，去掉10个最大/最小值，计算剩余180点平均值
 4. **printf重定向** - 调试输出到UART4
-5. **FreeRTOS多任务** - LED闪烁和数据处理独立运行
-6. **BSP测试套件** - ADC测试、数据处理测试、UART测试
+5. **FreeRTOS多任务** - LED闪烁任务
+6. **CAN通信驱动** - 完整的复帧传输协议（首帧+中间帧+末帧），支持106字节数据传输，回环测试验证通过 ✅
+7. **BSP测试套件** - ADC测试、数据处理测试、UART测试、CAN回环测试
+
+### CAN通信协议
+
+CAN通信实现了完整的复帧传输协议：
+
+- **帧格式**: CAN 2.0 标准帧（11位ID）
+- **节点地址**: 30
+- **数据长度**: 106字节（设备标识2字节 + 12路电压48字节 + 12路电流48字节 + 2路温度8字节）
+- **传输方式**: 复帧（首帧×1 + 中间帧×12 + 末帧×1 = 共14帧）
+- **校验方式**: SUM校验（末帧最后1字节）
+- **采样周期**: 1秒（TIM3触发）
+- **回环测试**: ✅ 通过
+
+详细协议请参考 `doc/can协议/can协议.md`。
 
 ### 测试说明
 
 测试代码位于 `Core/test/` 目录下，通过宏定义控制开关：
 
 ```c
-#define TEST_ENABLE_ADC           1    /* ADC测试 */
-#define TEST_ENABLE_DATA_PROCESS  1    /* 数据处理测试 */
-#define TEST_ENABLE_UART          1    /* 串口测试 */
+#define TEST_ENABLE               1    /* 测试总开关 */
+#define TEST_ENABLE_ADC           0    /* ADC测试 */
+#define TEST_ENABLE_DATA_PROCESS  0    /* 数据处理测试 */
+#define TEST_ENABLE_UART          0    /* 串口测试 */
+#define TEST_ENABLE_CAN           1    /* CAN测试 */
 ```
 
 上电后自动运行所有启用的测试，通过UART4输出测试结果。
 
-### 待实现
-1. CAN通信 - 发送26路处理后的数据
-2. 心跳包 - UART5定时发送
-3. Flash参数存储
+**CAN测试输出示例**：
+```
+[TEST] CAN Loopback Test
+  Enabling internal loopback mode...
+  Sending & receiving test data (14 frames)...
+    [RX] ID=0x1F1, DLC=8, Data=...
+    [RX] ID=0x1F2, DLC=8, Data=... (×12)
+    [RX] ID=0x1F3, DLC=5, Data=...
+  Received 14 frames
+  [PASS] CAN Loopback Test OK
+  Disabling loopback mode...
+```
+
+### 待实现（TODO）
+1. Flash参数存储 - 存储26通道的kb值
+2. 主从机通信功能完善
+3. 数值与真实值校准
+4. 移植shell
+5. UART5心跳包
+
+详见 `TODO.md`。
 
 ## 编译说明
 
