@@ -11,8 +11,11 @@
 
 #include "shell.h"
 #include <stdio.h>
-#include "../../Inc/data_structure.h"
-#include "../../Bsp/can/bsp_can.h"
+#include <stdlib.h>
+#include <string.h>
+#include "data_structure.h"
+#include "bsp_can.h"
+#include "bsp_flash.h"
 
 #if SHELL_USING_CMD_EXPORT != 1
 
@@ -89,6 +92,150 @@ static int CANTest_Cmd(int argc, char *argv[])
 }
 
 /**
+ * @brief Flash擦除命令
+ * Usage: flash_erase <page> 或 flash_erase all
+ */
+static int FlashErase_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    HAL_StatusTypeDef status;
+    char buffer[128];
+    uint32_t actual_page;
+
+    if (argc < 2) {
+        shellWriteString(shell, "Usage: flash_erase <page>|all\r\n");
+        return -1;
+    }
+
+    snprintf(buffer, sizeof(buffer), "Flash info: DATA_START=0x%08lX, PAGE_SIZE=%lu, PAGE_COUNT=%lu\r\n", 
+             FLASH_DATA_START_ADDR, FLASH_PAGE_SIZE, FLASH_DATA_PAGE_COUNT);
+    shellWriteString(shell, buffer);
+
+    if (strcmp(argv[1], "all") == 0) {
+        actual_page = (FLASH_DATA_START_ADDR - FLASH_BASE) / FLASH_PAGE_SIZE;
+        snprintf(buffer, sizeof(buffer), "Erasing all %lu pages starting from page %lu...\r\n", 
+                 FLASH_DATA_PAGE_COUNT, actual_page);
+        shellWriteString(shell, buffer);
+        status = BSP_FLASH_EraseAllData();
+    } else {
+        int page = atoi(argv[1]);
+        if (page < 0 || page >= (int)FLASH_DATA_PAGE_COUNT) {
+            snprintf(buffer, sizeof(buffer), "Invalid page! (0-%lu)\r\n", FLASH_DATA_PAGE_COUNT - 1);
+            shellWriteString(shell, buffer);
+            return -1;
+        }
+        actual_page = (FLASH_DATA_START_ADDR - FLASH_BASE) / FLASH_PAGE_SIZE + page;
+        snprintf(buffer, sizeof(buffer), "Erasing logical page %d (physical page %lu)...\r\n", page, actual_page);
+        shellWriteString(shell, buffer);
+        status = BSP_FLASH_ErasePage(page);
+    }
+
+    if (status == HAL_OK) {
+        shellWriteString(shell, "Erase done!\r\n");
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Erase failed! (status=%d)\r\n", status);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief Flash写入命令
+ * Usage: flash_write <addr> <data1> <data2> ...
+ */
+static int FlashWrite_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    HAL_StatusTypeDef status;
+    uint32_t addr;
+    uint8_t data[128];
+    int i;
+    char buffer[64];
+    
+    if (argc < 3) {
+        shellWriteString(shell, "Usage: flash_write <addr> <data1> <data2> ...\r\n");
+        return -1;
+    }
+    
+    addr = strtoul(argv[1], NULL, 0);
+    if (addr < FLASH_DATA_START_ADDR || addr >= FLASH_DATA_END_ADDR) {
+        snprintf(buffer, sizeof(buffer), "Invalid addr! (0x%08lX-0x%08lX)\r\n", FLASH_DATA_START_ADDR, FLASH_DATA_END_ADDR - 1);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+    
+    int data_len = argc - 2;
+    if (data_len > 128) data_len = 128;
+    
+    for (i = 0; i < data_len; i++) {
+        data[i] = (uint8_t)strtoul(argv[2 + i], NULL, 0);
+    }
+    
+    snprintf(buffer, sizeof(buffer), "Writing %d bytes to 0x%08lX...\r\n", data_len, addr);
+    shellWriteString(shell, buffer);
+    
+    status = BSP_FLASH_Write(addr, data, data_len);
+    
+    if (status == HAL_OK) {
+        shellWriteString(shell, "Write done!\r\n");
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Write failed! (status=%d)\r\n", status);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief Flash读取命令
+ * Usage: flash_read <addr> <len>
+ */
+static int FlashRead_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    uint32_t addr;
+    uint32_t len;
+    uint8_t data[128];
+    int i;
+    char buffer[128];
+    
+    if (argc < 3) {
+        shellWriteString(shell, "Usage: flash_read <addr> <len>\r\n");
+        return -1;
+    }
+    
+    addr = strtoul(argv[1], NULL, 0);
+    len = strtoul(argv[2], NULL, 0);
+    
+    if (addr < FLASH_DATA_START_ADDR || (addr + len) > FLASH_DATA_END_ADDR) {
+        snprintf(buffer, sizeof(buffer), "Invalid addr/len! (0x%08lX-0x%08lX)\r\n", FLASH_DATA_START_ADDR, FLASH_DATA_END_ADDR - 1);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+    
+    if (len > 128) len = 128;
+    
+    BSP_FLASH_Read(addr, data, len);
+    
+    snprintf(buffer, sizeof(buffer), "Read %lu bytes from 0x%08lX:\r\n", len, addr);
+    shellWriteString(shell, buffer);
+    
+    for (i = 0; i < (int)len; i++) {
+        if (i % 16 == 0) {
+            if (i > 0) shellWriteString(shell, "\r\n");
+            snprintf(buffer, sizeof(buffer), "  %04X: ", (unsigned int)(addr + i - FLASH_DATA_START_ADDR));
+            shellWriteString(shell, buffer);
+        }
+        snprintf(buffer, sizeof(buffer), "%02X ", data[i]);
+        shellWriteString(shell, buffer);
+    }
+    shellWriteString(shell, "\r\n");
+    
+    return 0;
+}
+
+/**
  * @brief shell命令表
  * 
  */
@@ -149,6 +296,12 @@ const ShellCommand shellCommandList[] =
                    sysinfo, SysInfo_Cmd, show system info),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    cantest, CANTest_Cmd, test CAN send),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   flash_erase, FlashErase_Cmd, erase flash: flash_erase <page>|all),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   flash_write, FlashWrite_Cmd, write flash: flash_write <addr> <data1> <data2> ...),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   flash_read, FlashRead_Cmd, read flash: flash_read <addr> <len>),
 };
 
 

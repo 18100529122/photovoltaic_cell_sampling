@@ -64,6 +64,7 @@
 									<listOptionValue builtIn="false" value="../Core/Bsp/can"/>
 									<listOptionValue builtIn="false" value="../Core/Bsp/usart"/>
 									<listOptionValue builtIn="false" value="../Core/Bsp/time"/>
+									<listOptionValue builtIn="false" value="../Core/Bsp/flash"/>
 									<listOptionValue builtIn="false" value="../Core/App/"/>
 									<listOptionValue builtIn="false" value="../Core/App/data_process"/>
 									<listOptionValue builtIn="false" value="../Core/test"/>

@@ -7,6 +7,7 @@
 #include "test_bsp.h"
 #include "bsp_adc.h"
 #include "bsp_can.h"
+#include "bsp_flash.h"
 #include "data_process.h"
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +52,10 @@ void Test_Run(void)
 
 #if (TEST_ENABLE_CAN)
     Test_CAN_Basic();
+#endif
+
+#if (TEST_ENABLE_FLASH)
+    Test_FLASH_Basic();
 #endif
 
     printf("\r\n========================================\r\n");
@@ -361,6 +366,69 @@ error:
 end:
     printf("  Disabling loopback mode...\r\n");
     BSP_CAN_DisableLoopback();
+}
+#endif
+
+#if (TEST_ENABLE_FLASH)
+void Test_FLASH_Basic(void)
+{
+    printf("\r\n[TEST] Flash Read/Write Test\r\n");
+    
+    HAL_StatusTypeDef status;
+    uint8_t write_data[32];
+    uint8_t read_data[32];
+    uint8_t pass = 1;
+    
+    printf("  Flash data start addr: 0x%08lX\r\n", FLASH_DATA_START_ADDR);
+    printf("  Flash data size:       %lu bytes\r\n", FLASH_DATA_SIZE);
+    
+    /* 准备测试数据 */
+    for (int i = 0; i < 32; i++) {
+        write_data[i] = (uint8_t)(i * 3 + 7);
+    }
+    
+    printf("  Erasing page 0...\r\n");
+    status = BSP_FLASH_ErasePage(0);
+    if (status != HAL_OK) {
+        printf("  [FAIL] Erase page failed (status=%d)\r\n", status);
+        pass = 0;
+        goto end;
+    }
+    printf("  [OK] Erase page done\r\n");
+    
+    printf("  Writing 32 bytes...\r\n");
+    status = BSP_FLASH_Write(FLASH_DATA_START_ADDR, write_data, 32);
+    if (status != HAL_OK) {
+        printf("  [FAIL] Write failed (status=%d, error=0x%08lX)\r\n", status, HAL_FLASH_GetError());
+        pass = 0;
+        goto end;
+    }
+    printf("  [OK] Write done\r\n");
+    
+    printf("  Reading 32 bytes...\r\n");
+    BSP_FLASH_Read(FLASH_DATA_START_ADDR, read_data, 32);
+    
+    printf("  Verifying...\r\n");
+    printf("  Write: ");
+    for (int i = 0; i < 32; i++) printf("%02X ", write_data[i]);
+    printf("\r\n  Read:  ");
+    for (int i = 0; i < 32; i++) printf("%02X ", read_data[i]);
+    printf("\r\n");
+    
+    for (int i = 0; i < 32; i++) {
+        if (read_data[i] != write_data[i]) {
+            printf("  [FAIL] Mismatch at index %d: 0x%02X != 0x%02X\r\n", i, read_data[i], write_data[i]);
+            pass = 0;
+            goto end;
+        }
+    }
+    
+end:
+    if (pass) {
+        printf("  [PASS] Flash Test OK\r\n");
+    } else {
+        printf("  [FAIL] Flash Test Failed\r\n");
+    }
 }
 #endif
 

@@ -7,7 +7,8 @@
 #include "bsp.h"
 #include "bsp_usart.h"
 #include "bsp_adc.h"
-#include "can/bsp_can.h"
+#include "bsp_can.h"
+#include "bsp_flash.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -30,4 +31,5 @@ void BSP_Init(void)
     BSP_USART_Init();
     BSP_ADC_Init();
     BSP_CAN_Init();
+    BSP_FLASH_Init();
 }
