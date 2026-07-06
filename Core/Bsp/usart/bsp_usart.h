@@ -40,6 +40,10 @@ void BSP_USART_Init(void);
  */
 void BSP_USART_Heart_Send(uint8_t *data, uint16_t len);
 
+/**
+ * @brief 获取 UART4 接收字节
+ */
+uint8_t BSP_USART_GetUart4RxByte(void);
 
 /**
  * @brief 串口回调函数声明

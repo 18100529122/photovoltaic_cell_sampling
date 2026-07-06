@@ -6,6 +6,7 @@
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "bsp_usart.h"
 #include "usart.h"
+#include "letter_shell_port.h"
 #include <string.h>
 
 /*========================= 宏定义 (Macros) ================================*/
@@ -65,18 +66,23 @@ void BSP_USART_Heart_Send(uint8_t *data, uint16_t len)
 }
 
 /**
+ * @brief 获取 UART4 接收字节
+ */
+uint8_t BSP_USART_GetUart4RxByte(void)
+{
+    return s_uart4_rx_byte;
+}
+
+/**
  * @brief 串口接收完成回调函数
  * @param huart 串口句柄
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == UART4) {
-        /* UART4接收回调 - 回传模式 */
-        if (g_uart4_rx_len < USART_DEBUG_RX_BUF_SIZE - 1) {
-            g_uart4_rx_buf[g_uart4_rx_len++] = s_uart4_rx_byte;
-        }
-        /* 回传接收到的字节 */
-        HAL_UART_Transmit(&huart4, &s_uart4_rx_byte, 1, 100);
+        /* UART4接收回调 - 交给 shell 处理 */
+        /* 将接收到的字符交给 shell 处理，shell 自己会处理回显 */
+        LetterShell_UART_RxCallback(s_uart4_rx_byte);
         /* 继续下一次接收 */
         HAL_UART_Receive_IT(&huart4, &s_uart4_rx_byte, 1);
     }

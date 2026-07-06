@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "bsp.h"
+#include "middleware.h"
 #include "app.h"
 #include "test_bsp.h"
 #include "usart.h"
@@ -133,6 +134,9 @@ void StartDefaultTask(void *argument)
   printf("  Photovoltaic Cell Sampling System\r\n");
   printf("  System Started\r\n");
   printf("========================================\r\n");
+
+  /* 中间件层初始化 */
+  Middleware_Init();
 
   /* 应用层初始化 */
   App_Init();

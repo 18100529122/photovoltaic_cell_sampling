@@ -300,22 +300,22 @@ void DataProcess_Task(void)
         DataProcess_ProcessAll();
 
         /* 打印测试 打印所有处理后的数据  */
-        printf("-----------------\n");
-        printf("adc_data.vs_result: ");
-        for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
-            printf("%.2f ", adc_data.vs_result[i]);
-        }
-        printf("\n");
-        printf("adc_data.cur_result: ");
-        for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
-            printf("%.2f ", adc_data.cur_result[i]);
-        }
-        printf("\n");
-        printf("adc_data.temp_result: ");
-        for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
-            printf("%.2f ", adc_data.temp_result[i]);
-        }
-        printf("\n");
+        // printf("-----------------\n");
+        // printf("adc_data.vs_result: ");
+        // for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+        //     printf("%.2f ", adc_data.vs_result[i]);
+        // }
+        // printf("\n");
+        // printf("adc_data.cur_result: ");
+        // for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+        //     printf("%.2f ", adc_data.cur_result[i]);
+        // }
+        // printf("\n");
+        // printf("adc_data.temp_result: ");
+        // for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+        //     printf("%.2f ", adc_data.temp_result[i]);
+        // }
+        // printf("\n");
     }
 }
 
