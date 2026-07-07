@@ -7,6 +7,8 @@
 #include "middleware.h"
 #include "letter_shell_port.h"
 #include "cmsis_os.h"
+#include "easyflash.h"
+#include "stdio.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 
@@ -26,6 +28,9 @@ void Middleware_Init(void)
 {
     /* 初始化 Letter Shell */
     LetterShell_Init();
+
+    /* 初始化 EasyFlash */
+    easyflash_init();
     
     /* 创建 Shell 任务 */
     BaseType_t ret = xTaskCreate(LetterShell_Task, 

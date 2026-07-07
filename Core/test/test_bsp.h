@@ -13,13 +13,14 @@ extern "C" {
 
 /*========================= 宏定义 (Macros) ================================*/
 /* 测试功能开关 - 1=开启，0=关闭 */
-#define TEST_ENABLE               0    /* 测试总开关 */
+#define TEST_ENABLE               1    /* 测试总开关 */
 #if (TEST_ENABLE)
 #define TEST_ENABLE_ADC           0    /* ADC测试 */
 #define TEST_ENABLE_DATA_PROCESS  0    /* 数据处理测试 */
 #define TEST_ENABLE_UART          0    /* 串口测试 */
 #define TEST_ENABLE_CAN           0    /* CAN测试 */
 #define TEST_ENABLE_FLASH         0    /* Flash测试 */
+#define TEST_ENABLE_EASYFLASH     0    /* EasyFlash测试 */
 #else
 /* 测试总开关关闭 */
 #define TEST_ENABLE_ADC           0    /* ADC测试 */
@@ -27,6 +28,7 @@ extern "C" {
 #define TEST_ENABLE_UART          0    /* 串口测试 */
 #define TEST_ENABLE_CAN           0    /* CAN测试 */
 #define TEST_ENABLE_FLASH         0    /* Flash测试 */
+#define TEST_ENABLE_EASYFLASH     0    /* EasyFlash测试 */
 #endif
 
 /*========================= 类型定义 (Typedefs) ============================*/
@@ -57,6 +59,10 @@ void Test_CAN_Basic(void);
 
 #if (TEST_ENABLE_FLASH)
 void Test_FLASH_Basic(void);
+#endif
+
+#if (TEST_ENABLE_EASYFLASH)
+void Test_EasyFlash_Basic(void);
 #endif
 
 #ifdef __cplusplus

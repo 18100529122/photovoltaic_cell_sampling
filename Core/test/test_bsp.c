@@ -9,6 +9,7 @@
 #include "bsp_can.h"
 #include "bsp_flash.h"
 #include "data_process.h"
+#include "easyflash.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -56,6 +57,10 @@ void Test_Run(void)
 
 #if (TEST_ENABLE_FLASH)
     Test_FLASH_Basic();
+#endif
+
+#if (TEST_ENABLE_EASYFLASH)
+    Test_EasyFlash_Basic();
 #endif
 
     printf("\r\n========================================\r\n");
@@ -428,6 +433,81 @@ end:
         printf("  [PASS] Flash Test OK\r\n");
     } else {
         printf("  [FAIL] Flash Test Failed\r\n");
+    }
+}
+#endif
+
+#if (TEST_ENABLE_EASYFLASH)
+void Test_EasyFlash_Basic(void)
+{
+    printf("\r\n[TEST] EasyFlash Basic Test\r\n");
+    
+    EfErrCode result;
+    uint8_t pass = 1;
+    const char *test_key = "test_key";
+    const char *test_value = "Hello EasyFlash!";
+    char read_value[64];
+    
+    /* 初始化 EasyFlash */
+    printf("  Initializing EasyFlash...\r\n");
+    result = easyflash_init();
+    if (result != EF_NO_ERR) {
+        printf("  [FAIL] Init failed (result=%d)\r\n", result);
+        pass = 0;
+        goto end;
+    }
+    printf("  [OK] Init done\r\n");
+    
+    /* 保存 ENV */
+    printf("  Saving ENV: %s = %s\r\n", test_key, test_value);
+    result = ef_set_env(test_key, test_value);
+    if (result != EF_NO_ERR) {
+        printf("  [FAIL] Save ENV failed (result=%d)\r\n", result);
+        pass = 0;
+        goto end;
+    }
+    printf("  [OK] Save done\r\n");
+    
+    /* 读取 ENV */
+    printf("  Reading ENV: %s\r\n", test_key);
+    const char *read_ptr = ef_get_env(test_key);
+    if (read_ptr == NULL) {
+        printf("  [FAIL] Read ENV failed (NULL)\r\n");
+        pass = 0;
+        goto end;
+    }
+    strncpy(read_value, read_ptr, sizeof(read_value) - 1);
+    read_value[sizeof(read_value) - 1] = '\0';
+    printf("  Read value: %s\r\n", read_value);
+    
+    /* 验证 */
+    if (strcmp(read_value, test_value) != 0) {
+        printf("  [FAIL] Value mismatch\r\n");
+        pass = 0;
+        goto end;
+    }
+    printf("  [OK] Value match\r\n");
+    
+    /* 测试 26 通道 kb 值 */
+    printf("\r\n  Testing kb_voltage and kb_current...\r\n");
+    const char *kb_voltage = ef_get_env("kb_voltage");
+    const char *kb_current = ef_get_env("kb_current");
+    
+    if (kb_voltage == NULL || kb_current == NULL) {
+        printf("  [FAIL] kb values not found\r\n");
+        pass = 0;
+        goto end;
+    }
+    
+    printf("  kb_voltage: %s\r\n", kb_voltage);
+    printf("  kb_current: %s\r\n", kb_current);
+    printf("  [OK] kb values OK\r\n");
+    
+end:
+    if (pass) {
+        printf("\r\n  [PASS] EasyFlash Test OK\r\n");
+    } else {
+        printf("\r\n  [FAIL] EasyFlash Test Failed\r\n");
     }
 }
 #endif

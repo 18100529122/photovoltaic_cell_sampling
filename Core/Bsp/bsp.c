@@ -31,5 +31,5 @@ void BSP_Init(void)
     BSP_USART_Init();
     BSP_ADC_Init();
     BSP_CAN_Init();
-    BSP_FLASH_Init();
+    // BSP_FLASH_Init(); //在EasyFlash初始化中初始化Flash
 }

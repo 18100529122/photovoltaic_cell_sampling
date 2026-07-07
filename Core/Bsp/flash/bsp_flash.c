@@ -5,6 +5,8 @@
 
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "bsp_flash.h"
+#include "stdio.h"
+#include "string.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 #define FLASH_BANK1_END_ADDR  (0x08040000UL)
@@ -74,20 +76,30 @@ HAL_StatusTypeDef BSP_FLASH_ErasePage(uint32_t page)
     return status;
 }
 
-HAL_StatusTypeDef BSP_FLASH_EraseAllData(void)
+HAL_StatusTypeDef BSP_FLASH_Erase(uint32_t addr, uint32_t len)
 {
     HAL_StatusTypeDef status;
     FLASH_EraseInitTypeDef erase_init;
     uint32_t page_error;
     uint32_t actual_page;
     uint32_t bank;
+    uint32_t start_addr;
+    uint32_t num_pages;
 
-    bank = BSP_FLASH_GetBank(FLASH_DATA_START_ADDR);
+    if (addr < FLASH_DATA_START_ADDR || (addr + len) > FLASH_DATA_END_ADDR) {
+        return HAL_ERROR;
+    }
+
+    /* 对齐到页起始地址 */
+    start_addr = addr & ~(FLASH_PAGE_SIZE - 1);
+    num_pages = ((addr + len - 1) - start_addr) / FLASH_PAGE_SIZE + 1;
+
+    bank = BSP_FLASH_GetBank(start_addr);
     
     if (bank == FLASH_BANK_1) {
-        actual_page = (FLASH_DATA_START_ADDR - FLASH_BASE) / FLASH_PAGE_SIZE;
+        actual_page = (start_addr - FLASH_BASE) / FLASH_PAGE_SIZE;
     } else {
-        actual_page = (FLASH_DATA_START_ADDR - FLASH_BANK1_END_ADDR) / FLASH_PAGE_SIZE;
+        actual_page = (start_addr - FLASH_BANK1_END_ADDR) / FLASH_PAGE_SIZE;
     }
 
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_PROGERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_SIZERR | FLASH_FLAG_PGSERR | FLASH_FLAG_MISERR | FLASH_FLAG_FASTERR);
@@ -100,13 +112,18 @@ HAL_StatusTypeDef BSP_FLASH_EraseAllData(void)
     erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
     erase_init.Banks = bank;
     erase_init.Page = actual_page;
-    erase_init.NbPages = FLASH_DATA_PAGE_COUNT;
+    erase_init.NbPages = num_pages;
 
     status = HAL_FLASHEx_Erase(&erase_init, &page_error);
 
     HAL_FLASH_Lock();
 
     return status;
+}
+
+HAL_StatusTypeDef BSP_FLASH_EraseAllData(void)
+{
+    return BSP_FLASH_Erase(FLASH_DATA_START_ADDR, FLASH_DATA_SIZE);
 }
 
 HAL_StatusTypeDef BSP_FLASH_Write(uint32_t addr, const uint8_t *data, uint32_t len)
@@ -121,15 +138,13 @@ HAL_StatusTypeDef BSP_FLASH_Write(uint32_t addr, const uint8_t *data, uint32_t l
         return HAL_ERROR;
     }
 
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_PROGERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_SIZERR | FLASH_FLAG_PGSERR | FLASH_FLAG_MISERR | FLASH_FLAG_FASTERR);
-
     status = HAL_FLASH_Unlock();
     if (status != HAL_OK) {
         return status;
     }
 
     for (i = 0; i < len; ) {
-        aligned_addr = (addr + i) & ~0x07;
+        aligned_addr = (addr + i) & ~0x07UL;
         uint32_t offset_in_dword = (addr + i) - aligned_addr;
         uint32_t bytes_remaining = len - i;
         uint32_t bytes_to_write = 8 - offset_in_dword;
@@ -138,13 +153,15 @@ HAL_StatusTypeDef BSP_FLASH_Write(uint32_t addr, const uint8_t *data, uint32_t l
             bytes_to_write = bytes_remaining;
         }
 
+        /* 擦除后都是 0xFF，直接填充 */
         memset(write_buffer, 0xFF, 8);
         memcpy(&write_buffer[offset_in_dword], &data[i], bytes_to_write);
 
-        data64 = 0;
-        for (uint32_t j = 0; j < 8; j++) {
-            data64 |= (uint64_t)write_buffer[j] << (j * 8);
-        }
+        /* 直接用 memcpy 避免字节序问题 */
+        memcpy(&data64, write_buffer, 8);
+
+        /* 每次写入前清除标志 */
+        __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_PROGERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_SIZERR | FLASH_FLAG_PGSERR | FLASH_FLAG_MISERR | FLASH_FLAG_FASTERR);
 
         status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, aligned_addr, data64);
         if (status != HAL_OK) {

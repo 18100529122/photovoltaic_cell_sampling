@@ -16,6 +16,7 @@
 #include "data_structure.h"
 #include "bsp_can.h"
 #include "bsp_flash.h"
+#include "easyflash.h"
 
 #if SHELL_USING_CMD_EXPORT != 1
 
@@ -107,25 +108,25 @@ static int FlashErase_Cmd(int argc, char *argv[])
         return -1;
     }
 
-    snprintf(buffer, sizeof(buffer), "Flash info: DATA_START=0x%08lX, PAGE_SIZE=%lu, PAGE_COUNT=%lu\r\n", 
-             FLASH_DATA_START_ADDR, FLASH_PAGE_SIZE, FLASH_DATA_PAGE_COUNT);
+    snprintf(buffer, sizeof(buffer), "Flash info: DATA_START=0x%08X, PAGE_SIZE=%u, PAGE_COUNT=%u\r\n", 
+             (unsigned int)FLASH_DATA_START_ADDR, (unsigned int)FLASH_PAGE_SIZE, (unsigned int)FLASH_DATA_PAGE_COUNT);
     shellWriteString(shell, buffer);
 
     if (strcmp(argv[1], "all") == 0) {
         actual_page = (FLASH_DATA_START_ADDR - FLASH_BASE) / FLASH_PAGE_SIZE;
-        snprintf(buffer, sizeof(buffer), "Erasing all %lu pages starting from page %lu...\r\n", 
-                 FLASH_DATA_PAGE_COUNT, actual_page);
+        snprintf(buffer, sizeof(buffer), "Erasing all %u pages starting from page %u...\r\n", 
+                 (unsigned int)FLASH_DATA_PAGE_COUNT, (unsigned int)actual_page);
         shellWriteString(shell, buffer);
         status = BSP_FLASH_EraseAllData();
     } else {
         int page = atoi(argv[1]);
         if (page < 0 || page >= (int)FLASH_DATA_PAGE_COUNT) {
-            snprintf(buffer, sizeof(buffer), "Invalid page! (0-%lu)\r\n", FLASH_DATA_PAGE_COUNT - 1);
+            snprintf(buffer, sizeof(buffer), "Invalid page! (0-%u)\r\n", (unsigned int)(FLASH_DATA_PAGE_COUNT - 1));
             shellWriteString(shell, buffer);
             return -1;
         }
         actual_page = (FLASH_DATA_START_ADDR - FLASH_BASE) / FLASH_PAGE_SIZE + page;
-        snprintf(buffer, sizeof(buffer), "Erasing logical page %d (physical page %lu)...\r\n", page, actual_page);
+        snprintf(buffer, sizeof(buffer), "Erasing logical page %d (physical page %u)...\r\n", page, (unsigned int)actual_page);
         shellWriteString(shell, buffer);
         status = BSP_FLASH_ErasePage(page);
     }
@@ -160,7 +161,8 @@ static int FlashWrite_Cmd(int argc, char *argv[])
     
     addr = strtoul(argv[1], NULL, 0);
     if (addr < FLASH_DATA_START_ADDR || addr >= FLASH_DATA_END_ADDR) {
-        snprintf(buffer, sizeof(buffer), "Invalid addr! (0x%08lX-0x%08lX)\r\n", FLASH_DATA_START_ADDR, FLASH_DATA_END_ADDR - 1);
+        snprintf(buffer, sizeof(buffer), "Invalid addr! (0x%08X-0x%08X)\r\n", 
+                 (unsigned int)FLASH_DATA_START_ADDR, (unsigned int)(FLASH_DATA_END_ADDR - 1));
         shellWriteString(shell, buffer);
         return -1;
     }
@@ -172,7 +174,7 @@ static int FlashWrite_Cmd(int argc, char *argv[])
         data[i] = (uint8_t)strtoul(argv[2 + i], NULL, 0);
     }
     
-    snprintf(buffer, sizeof(buffer), "Writing %d bytes to 0x%08lX...\r\n", data_len, addr);
+    snprintf(buffer, sizeof(buffer), "Writing %d bytes to 0x%08X...\r\n", data_len, (unsigned int)addr);
     shellWriteString(shell, buffer);
     
     status = BSP_FLASH_Write(addr, data, data_len);
@@ -209,7 +211,8 @@ static int FlashRead_Cmd(int argc, char *argv[])
     len = strtoul(argv[2], NULL, 0);
     
     if (addr < FLASH_DATA_START_ADDR || (addr + len) > FLASH_DATA_END_ADDR) {
-        snprintf(buffer, sizeof(buffer), "Invalid addr/len! (0x%08lX-0x%08lX)\r\n", FLASH_DATA_START_ADDR, FLASH_DATA_END_ADDR - 1);
+        snprintf(buffer, sizeof(buffer), "Invalid addr/len! (0x%08X-0x%08X)\r\n", 
+                 (unsigned int)FLASH_DATA_START_ADDR, (unsigned int)(FLASH_DATA_END_ADDR - 1));
         shellWriteString(shell, buffer);
         return -1;
     }
@@ -218,7 +221,7 @@ static int FlashRead_Cmd(int argc, char *argv[])
     
     BSP_FLASH_Read(addr, data, len);
     
-    snprintf(buffer, sizeof(buffer), "Read %lu bytes from 0x%08lX:\r\n", len, addr);
+    snprintf(buffer, sizeof(buffer), "Read %u bytes from 0x%08X:\r\n", (unsigned int)len, (unsigned int)addr);
     shellWriteString(shell, buffer);
     
     for (i = 0; i < (int)len; i++) {
@@ -231,6 +234,122 @@ static int FlashRead_Cmd(int argc, char *argv[])
         shellWriteString(shell, buffer);
     }
     shellWriteString(shell, "\r\n");
+    
+    return 0;
+}
+
+/**
+ * @brief ENV读取命令
+ * Usage: env_get <key>
+ */
+static int EnvGet_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    
+    if (argc < 2) {
+        shellWriteString(shell, "Usage: env_get <key>\r\n");
+        return -1;
+    }
+    
+    const char *value = ef_get_env(argv[1]);
+    if (value == NULL) {
+        snprintf(buffer, sizeof(buffer), "Env '%s' not found!\r\n", argv[1]);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+    
+    snprintf(buffer, sizeof(buffer), "Env '%s' = '%s'\r\n", argv[1], value);
+    shellWriteString(shell, buffer);
+    
+    return 0;
+}
+
+/**
+ * @brief ENV设置命令
+ * Usage: env_set <key> <value>
+ */
+static int EnvSet_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    EfErrCode err;
+    
+    if (argc < 3) {
+        shellWriteString(shell, "Usage: env_set <key> <value>\r\n");
+        return -1;
+    }
+    
+    err = ef_set_and_save_env(argv[1], argv[2]);
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Env '%s' set to '%s' and saved!\r\n", argv[1], argv[2]);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set env failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief ENV删除命令
+ * Usage: env_del <key>
+ */
+static int EnvDel_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    EfErrCode err;
+    
+    if (argc < 2) {
+        shellWriteString(shell, "Usage: env_del <key>\r\n");
+        return -1;
+    }
+    
+    err = ef_del_and_save_env(argv[1]);
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Env '%s' deleted and saved!\r\n", argv[1]);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Delete env failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief ENV打印命令
+ * Usage: env_print
+ */
+static int EnvPrint_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[256];
+    const char *value;
+    
+    if (argc > 1) {
+        shellWriteString(shell, "Usage: env_print\r\n");
+        return -1;
+    }
+    
+    shellWriteString(shell, "=== Env List ===\r\n");
+    
+    // 打印已知的 ENV 变量
+    value = ef_get_env("kb_voltage");
+    if (value) {
+        snprintf(buffer, sizeof(buffer), "  kb_voltage = %s\r\n", value);
+        shellWriteString(shell, buffer);
+    }
+    
+    value = ef_get_env("kb_current");
+    if (value) {
+        snprintf(buffer, sizeof(buffer), "  kb_current = %s\r\n", value);
+        shellWriteString(shell, buffer);
+    }
+    
+    shellWriteString(shell, "\r\nmode: normal\r\n");
     
     return 0;
 }
@@ -302,6 +421,14 @@ const ShellCommand shellCommandList[] =
                    flash_write, FlashWrite_Cmd, write flash: flash_write <addr> <data1> <data2> ...),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    flash_read, FlashRead_Cmd, read flash: flash_read <addr> <len>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_get, EnvGet_Cmd, get env: env_get <key>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set, EnvSet_Cmd, set env: env_set <key> <value>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_del, EnvDel_Cmd, delete env: env_del <key>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_print, EnvPrint_Cmd, print all envs: env_print),
 };
 
 

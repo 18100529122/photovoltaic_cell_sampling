@@ -15,7 +15,7 @@ extern "C" {
 #define FLASH_DATA_START_ADDR    0x0807C000UL
 #define FLASH_DATA_SIZE          (16 * 1024UL)
 #define FLASH_DATA_END_ADDR      (FLASH_DATA_START_ADDR + FLASH_DATA_SIZE)
-#define FLASH_PAGE_SIZE          (2 * 1024UL)
+// #define FLASH_PAGE_SIZE          (2 * 1024UL)    // 2KB 页面大小 hal库已定义
 #define FLASH_DATA_PAGE_COUNT    (FLASH_DATA_SIZE / FLASH_PAGE_SIZE)
 
 /*========================= 类型定义 (Typedefs) ============================*/
@@ -25,6 +25,7 @@ extern "C" {
 /*========================= 函数声明 (Function Declarations) ===============*/
 void BSP_FLASH_Init(void);
 HAL_StatusTypeDef BSP_FLASH_ErasePage(uint32_t page);
+HAL_StatusTypeDef BSP_FLASH_Erase(uint32_t addr, uint32_t len);
 HAL_StatusTypeDef BSP_FLASH_EraseAllData(void);
 HAL_StatusTypeDef BSP_FLASH_Write(uint32_t addr, const uint8_t *data, uint32_t len);
 void BSP_FLASH_Read(uint32_t addr, uint8_t *data, uint32_t len);
