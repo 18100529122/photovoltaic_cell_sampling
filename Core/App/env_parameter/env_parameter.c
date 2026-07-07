@@ -228,7 +228,7 @@ void EnvParameter_SwitchToMaster(void)
     EnvParameter_Save();
     
     /* 延时5秒 */
-    HAL_Delay(REBOOT_DELAY_MS);
+    osDelay(REBOOT_DELAY_MS);
     
     /* 软件复位 */
     NVIC_SystemReset();
