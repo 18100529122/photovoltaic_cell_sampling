@@ -7,6 +7,7 @@
 #include "app.h"
 #include "bsp_adc.h"
 #include "data_process.h"
+#include "env_parameter.h"
 #include "tim.h"
 #include <stdio.h>
 
@@ -26,6 +27,9 @@
  */
 void App_Init(void)
 {
+    /* 先初始化Env参数 */
+    EnvParameter_Init();
+    
     BSP_ADC_Init();
     DataProcess_Init();
 

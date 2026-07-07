@@ -605,24 +605,24 @@ void ef_print_env(void) {
             c = (*env_cache_data_addr) >> (8 * j);
             ef_print("%c", c);
             if (c == '\0') {
-                ef_print("\n");
+                ef_print("\r\n");
                 break;
             }
         }
     }
 
 #ifndef EF_ENV_USING_PFS_MODE
-    ef_print("\nmode: normal\n");
-    ef_print("size: %ld/%ld bytes.\n", get_env_user_used_size(), ENV_USER_SETTING_SIZE);
+    ef_print("\nmode: normal\r\n");
+    ef_print("size: %ld/%ld bytes.\r\n", get_env_user_used_size(), ENV_USER_SETTING_SIZE);
 #else
-    ef_print("\nmode: power fail safeguard\n");
-    ef_print("size: %ld/%ld bytes, write bytes %ld/%ld.\n", get_env_user_used_size(),
+    ef_print("\nmode: power fail safeguard\r\n");
+    ef_print("size: %ld/%ld bytes, write bytes %ld/%ld.\r\n", get_env_user_used_size(),
              ENV_USER_SETTING_SIZE, ef_get_env_write_bytes(), ENV_AREA_SIZE);
-    ef_print("saved count: %ld\n", env_cache[ENV_PARAM_INDEX_SAVED_COUNT]);
+    ef_print("saved count: %ld\r\n", env_cache[ENV_PARAM_INDEX_SAVED_COUNT]);
 #endif
 
 #ifdef EF_ENV_AUTO_UPDATE
-    ef_print("ver num: %d\n", env_cache[ENV_PARAM_INDEX_VER_NUM]);
+    ef_print("ver num: %d\r\n", env_cache[ENV_PARAM_INDEX_VER_NUM]);
 #endif
 }
 

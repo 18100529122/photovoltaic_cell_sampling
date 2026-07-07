@@ -69,7 +69,27 @@ typedef struct {
     float temperature[ADC_CH_TEMP_COUNT];           /* 2路温度数据 */
 } ResultData_t;
 
+/*========================= 心跳包与env参数定义 ============================*/
+/* 心跳包格式相关宏 */
+#define HEARTBEAT_PACKET_LEN        6       /* 心跳包总长度 */
+#define HEARTBEAT_HEADER            0xDB    /* 包头 */
+#define HEARTBEAT_CMD               0x01    /* 心跳包指令码 */
+#define CRC8_POLYNOMIAL             0x07    /* CRC8多项式 */
+
+/* Env配置结构体 */
+typedef struct {
+    uint8_t is_master;                    /* 1: 主机, 0: 从机 */
+    float   vs_k[ADC_CH_VOLTAGE_COUNT];   /* 电压通道 k 值 (12个) */
+    float   vs_b[ADC_CH_VOLTAGE_COUNT];   /* 电压通道 b 值 (12个) */
+    float   cur_k[ADC_CH_CURRENT_COUNT];  /* 电流通道 k 值 (12个) */
+    float   cur_b[ADC_CH_CURRENT_COUNT];  /* 电流通道 b 值 (12个) */
+    float   temp_k[ADC_CH_TEMP_COUNT];    /* 温度通道 k 值 (2个) */
+    float   temp_b[ADC_CH_TEMP_COUNT];    /* 温度通道 b 值 (2个) */
+} Env_Config_t;
+
 /*========================= 全局变量 (Global Variables) ====================*/
+extern Env_Config_t g_env_config;         /* Env配置结构体 */
+extern uint32_t g_heartbeat_timeout;      /* 心跳超时计数器（从机用） */
 
 /*========================= 函数声明 (Function Declarations) ===============*/
 

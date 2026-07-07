@@ -13,7 +13,7 @@ extern "C" {
 
 /*========================= 宏定义 (Macros) ================================*/
 /* 测试功能开关 - 1=开启，0=关闭 */
-#define TEST_ENABLE               1    /* 测试总开关 */
+#define TEST_ENABLE               0    /* 测试总开关 */
 #if (TEST_ENABLE)
 #define TEST_ENABLE_ADC           0    /* ADC测试 */
 #define TEST_ENABLE_DATA_PROCESS  0    /* 数据处理测试 */

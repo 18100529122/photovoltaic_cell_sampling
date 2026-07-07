@@ -17,6 +17,7 @@
 #include "bsp_can.h"
 #include "bsp_flash.h"
 #include "easyflash.h"
+#include "env_parameter.h"
 
 #if SHELL_USING_CMD_EXPORT != 1
 
@@ -320,36 +321,274 @@ static int EnvDel_Cmd(int argc, char *argv[])
 }
 
 /**
+ * @brief 设置主从机命令
+ * Usage: env_set_master 1 或 env_set_master 0
+ */
+static int EnvSetMaster_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    EfErrCode err;
+    
+    if (argc != 2) {
+        shellWriteString(shell, "Usage: env_set_master 1|0\r\n");
+        return -1;
+    }
+    
+    int is_master = atoi(argv[1]);
+    const char *role_str = is_master ? "master" : "slave";
+    
+    err = ef_set_and_save_env("node_role", role_str);
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set node role to %s and saved! Please reboot to take effect.\r\n", role_str);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief 设置电压通道k/b值命令
+ * Usage: env_set_vs <channel> <k> <b>
+ */
+static int EnvSetVs_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    float k_array[ADC_CH_VOLTAGE_COUNT];
+    float b_array[ADC_CH_VOLTAGE_COUNT];
+    int channel;
+    float k, b;
+    EfErrCode err;
+    
+    if (argc != 4) {
+        shellWriteString(shell, "Usage: env_set_vs <0-11> <k> <b>\r\n");
+        return -1;
+    }
+    
+    channel = atoi(argv[1]);
+    k = atof(argv[2]);
+    b = atof(argv[3]);
+    
+    if (channel < 0 || channel >= ADC_CH_VOLTAGE_COUNT) {
+        shellWriteString(shell, "Invalid channel! (0-11)\r\n");
+        return -1;
+    }
+    
+    // 读取现有值或使用默认值
+    {
+        const char *value = ef_get_env("vs_k");
+        if (value) {
+            StringToFloatArray(value, k_array, ADC_CH_VOLTAGE_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) k_array[i] = 1.0f;
+        }
+    }
+    {
+        const char *value = ef_get_env("vs_b");
+        if (value) {
+            StringToFloatArray(value, b_array, ADC_CH_VOLTAGE_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) b_array[i] = 0.0f;
+        }
+    }
+    
+    // 修改指定通道
+    k_array[channel] = k;
+    b_array[channel] = b;
+    
+    // 转换为字符串并保存
+    {
+        char k_str[256], b_str[256];
+        FloatArrayToString(k_array, ADC_CH_VOLTAGE_COUNT, k_str, sizeof(k_str));
+        FloatArrayToString(b_array, ADC_CH_VOLTAGE_COUNT, b_str, sizeof(b_str));
+        
+        err = ef_set_and_save_env("vs_k", k_str);
+        if (err == EF_NO_ERR) {
+            err = ef_set_and_save_env("vs_b", b_str);
+        }
+    }
+    
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set vs[%d] k=%.6f, b=%.6f and saved!\r\n", channel, k, b);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief 设置电流通道k/b值命令
+ * Usage: env_set_cur <channel> <k> <b>
+ */
+static int EnvSetCur_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    float k_array[ADC_CH_CURRENT_COUNT];
+    float b_array[ADC_CH_CURRENT_COUNT];
+    int channel;
+    float k, b;
+    EfErrCode err;
+    
+    if (argc != 4) {
+        shellWriteString(shell, "Usage: env_set_cur <0-11> <k> <b>\r\n");
+        return -1;
+    }
+    
+    channel = atoi(argv[1]);
+    k = atof(argv[2]);
+    b = atof(argv[3]);
+    
+    if (channel < 0 || channel >= ADC_CH_CURRENT_COUNT) {
+        shellWriteString(shell, "Invalid channel! (0-11)\r\n");
+        return -1;
+    }
+    
+    // 读取现有值或使用默认值
+    {
+        const char *value = ef_get_env("cur_k");
+        if (value) {
+            StringToFloatArray(value, k_array, ADC_CH_CURRENT_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) k_array[i] = 1.0f;
+        }
+    }
+    {
+        const char *value = ef_get_env("cur_b");
+        if (value) {
+            StringToFloatArray(value, b_array, ADC_CH_CURRENT_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) b_array[i] = 0.0f;
+        }
+    }
+    
+    // 修改指定通道
+    k_array[channel] = k;
+    b_array[channel] = b;
+    
+    // 转换为字符串并保存
+    {
+        char k_str[256], b_str[256];
+        FloatArrayToString(k_array, ADC_CH_CURRENT_COUNT, k_str, sizeof(k_str));
+        FloatArrayToString(b_array, ADC_CH_CURRENT_COUNT, b_str, sizeof(b_str));
+        
+        err = ef_set_and_save_env("cur_k", k_str);
+        if (err == EF_NO_ERR) {
+            err = ef_set_and_save_env("cur_b", b_str);
+        }
+    }
+    
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set cur[%d] k=%.6f, b=%.6f and saved!\r\n", channel, k, b);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief 设置温度通道k/b值命令
+ * Usage: env_set_temp <channel> <k> <b>
+ */
+static int EnvSetTemp_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    float k_array[ADC_CH_TEMP_COUNT];
+    float b_array[ADC_CH_TEMP_COUNT];
+    int channel;
+    float k, b;
+    EfErrCode err;
+    
+    if (argc != 4) {
+        shellWriteString(shell, "Usage: env_set_temp <0-1> <k> <b>\r\n");
+        return -1;
+    }
+    
+    channel = atoi(argv[1]);
+    k = atof(argv[2]);
+    b = atof(argv[3]);
+    
+    if (channel < 0 || channel >= ADC_CH_TEMP_COUNT) {
+        shellWriteString(shell, "Invalid channel! (0-1)\r\n");
+        return -1;
+    }
+    
+    // 读取现有值或使用默认值
+    {
+        const char *value = ef_get_env("temp_k");
+        if (value) {
+            StringToFloatArray(value, k_array, ADC_CH_TEMP_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_TEMP_COUNT; i++) k_array[i] = 1.0f;
+        }
+    }
+    {
+        const char *value = ef_get_env("temp_b");
+        if (value) {
+            StringToFloatArray(value, b_array, ADC_CH_TEMP_COUNT);
+        } else {
+            int i;
+            for (i = 0; i < ADC_CH_TEMP_COUNT; i++) b_array[i] = 0.0f;
+        }
+    }
+    
+    // 修改指定通道
+    k_array[channel] = k;
+    b_array[channel] = b;
+    
+    // 转换为字符串并保存
+    {
+        char k_str[256], b_str[256];
+        FloatArrayToString(k_array, ADC_CH_TEMP_COUNT, k_str, sizeof(k_str));
+        FloatArrayToString(b_array, ADC_CH_TEMP_COUNT, b_str, sizeof(b_str));
+        
+        err = ef_set_and_save_env("temp_k", k_str);
+        if (err == EF_NO_ERR) {
+            err = ef_set_and_save_env("temp_b", b_str);
+        }
+    }
+    
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set temp[%d] k=%.6f, b=%.6f and saved!\r\n", channel, k, b);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
  * @brief ENV打印命令
  * Usage: env_print
  */
 static int EnvPrint_Cmd(int argc, char *argv[])
 {
-    Shell *shell = shellGetCurrent();
-    char buffer[256];
-    const char *value;
-    
     if (argc > 1) {
-        shellWriteString(shell, "Usage: env_print\r\n");
+        shellWriteString(shellGetCurrent(), "Usage: env_print\r\n");
         return -1;
     }
     
-    shellWriteString(shell, "=== Env List ===\r\n");
-    
-    // 打印已知的 ENV 变量
-    value = ef_get_env("kb_voltage");
-    if (value) {
-        snprintf(buffer, sizeof(buffer), "  kb_voltage = %s\r\n", value);
-        shellWriteString(shell, buffer);
-    }
-    
-    value = ef_get_env("kb_current");
-    if (value) {
-        snprintf(buffer, sizeof(buffer), "  kb_current = %s\r\n", value);
-        shellWriteString(shell, buffer);
-    }
-    
-    shellWriteString(shell, "\r\nmode: normal\r\n");
+    // 使用EasyFlash自带的函数打印所有env
+    shellWriteString(shellGetCurrent(), "=== Env List ===\r\n");
+    ef_print_env();
     
     return 0;
 }
@@ -429,6 +668,14 @@ const ShellCommand shellCommandList[] =
                    env_del, EnvDel_Cmd, delete env: env_del <key>),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    env_print, EnvPrint_Cmd, print all envs: env_print),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_master, EnvSetMaster_Cmd, set master/slave: env_set_master 1|0),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_vs, EnvSetVs_Cmd, set vs k/b: env_set_vs <0-11> <k> <b>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_cur, EnvSetCur_Cmd, set cur k/b: env_set_cur <0-11> <k> <b>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_temp, EnvSetTemp_Cmd, set temp k/b: env_set_temp <0-1> <k> <b>),
 };
 
 
