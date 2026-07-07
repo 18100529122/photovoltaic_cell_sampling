@@ -44,6 +44,7 @@
 |---------|--------|---------|---------|
 | defaultTask | Normal | 512 | LED闪烁、BSP初始化、应用层初始化、主循环 |
 | shell_task | tskIDLE_PRIORITY+1 | 1024 | Letter Shell 命令行交互 |
+| adc_process | tskIDLE_PRIORITY+2 | 4096 | ADC数据处理、k/b校准、CAN发送 |
 
 ### 软件分层架构
 
@@ -108,7 +109,7 @@ photovoltaic_cell_sampling/
 2. **ADC+DMA驱动** - 4个ADC通过DMA采集数据，每通道200点采样，TIM3每秒触发一次采集
 3. **数据处理算法** - 每通道200点采集，去掉10个最大/最小值，计算剩余180点平均值
 4. **printf重定向** - 调试输出到UART4
-5. **FreeRTOS多任务** - LED闪烁任务 + Shell命令行任务
+5. **FreeRTOS多任务** - LED闪烁任务 + Shell命令行任务 + ADC数据处理任务
 6. **CAN通信驱动** - 完整的复帧传输协议（首帧+中间帧+末帧），支持106字节数据传输，回环测试验证通过 ✅
 7. **Letter Shell 移植** - 命令行 shell 移植完成，支持命令交互 ✅
 8. **Flash存储驱动** - 支持16KB数据区（0x0807C000）读写擦除，双Bank正确处理 ✅
@@ -116,6 +117,9 @@ photovoltaic_cell_sampling/
 10. **BSP测试套件** - ADC测试、数据处理测试、UART测试、CAN回环测试、Flash读写测试、EasyFlash测试 ✅
 11. **主从机模式** - 支持主机/从机模式，主机每10秒发送心跳包，从机60秒无心跳自动变主机 ✅
 12. **完整 k/b 值管理** - 支持通过 Shell 命令设置任意通道的 k 和 b 值 ✅
+13. **k/b 校准应用** - ADC数据处理后自动应用校准公式（真实值 = ADC值 × k + b） ✅
+14. **自动 CAN 发送** - 主机模式下，ADC数据处理完成后自动通过 CAN 发送校准后的数据 ✅
+15. **ADC 数据打印命令** - 新增 `adc_print` 命令，可打印所有通道校准后的数据 ✅
 
 ### 系统启动流程
 
@@ -183,6 +187,7 @@ CAN通信实现了完整的复帧传输协议：
 | `env_set_vs <0-11> <k> <b>` | 设置指定电压通道的 k 和 b 值 |
 | `env_set_cur <0-11> <k> <b>` | 设置指定电流通道的 k 和 b 值 |
 | `env_set_temp <0-1> <k> <b>` | 设置指定温度通道的 k 和 b 值 |
+| `adc_print` | 打印所有 ADC 通道校准后的数据 |
 | `clear` | 清空控制台 |
 | `cmds` / `vars` / `keys` / `users` | 显示各类列表 |
 
@@ -251,6 +256,24 @@ user:/$ env_set_temp 1 2.5 0.2
 Set temp[1] k=2.500000, b=0.200000 and saved!
 ```
 
+#### ADC 数据打印命令使用示例：
+
+```
+user:/$ adc_print
+=== ADC Data ===
+Voltage (VS0-VS11):
+  VS0: 12.345678
+  VS1: 12.456789
+  ...
+Current (CUR0-CUR11):
+  CUR0: 0.123456
+  CUR1: 0.234567
+  ...
+Temperature (TEMP0-TEMP1):
+  TEMP0: 25.123456
+  TEMP1: 26.234567
+```
+
 ### 测试说明
 
 测试代码位于 `Core/test/` 目录下，通过宏定义控制开关：
@@ -281,7 +304,6 @@ Set temp[1] k=2.500000, b=0.200000 and saved!
 ```
 
 ### 待实现（TODO）
-1. 数值与真实值校准
 
 详见 `TODO.md`。
 

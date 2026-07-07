@@ -14,10 +14,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "data_structure.h"
+#include "data_process.h"
+#include "env_parameter.h"
 #include "bsp_can.h"
 #include "bsp_flash.h"
 #include "easyflash.h"
-#include "env_parameter.h"
 
 #if SHELL_USING_CMD_EXPORT != 1
 
@@ -594,6 +595,57 @@ static int EnvPrint_Cmd(int argc, char *argv[])
 }
 
 /**
+ * @brief ADC数据打印命令
+ * Usage: adc_print
+ */
+static int AdcPrint_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    int i;
+    
+    shellWriteString(shell, "=== ADC Data ===\r\n");
+    
+    // 获取ADC数据并应用校准
+    ADC_Data_t *adc_data_ptr = DataProcess_GetData();
+    ResultData_t result_data;
+    
+    // 应用k/b校准公式: 真实值 = ADC值 * k + b
+    for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+        result_data.voltage[i] = adc_data_ptr->vs_result[i] * g_env_config.vs_k[i] + g_env_config.vs_b[i];
+    }
+    for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+        result_data.current[i] = adc_data_ptr->cur_result[i] * g_env_config.cur_k[i] + g_env_config.cur_b[i];
+    }
+    for (i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+        result_data.temperature[i] = adc_data_ptr->temp_result[i] * g_env_config.temp_k[i] + g_env_config.temp_b[i];
+    }
+    
+    // 打印电压数据
+    shellWriteString(shell, "Voltage (VS0-VS11):\r\n");
+    for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+        snprintf(buffer, sizeof(buffer), "  VS%d: %.6f\r\n", i, result_data.voltage[i]);
+        shellWriteString(shell, buffer);
+    }
+    
+    // 打印电流数据
+    shellWriteString(shell, "Current (CUR0-CUR11):\r\n");
+    for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+        snprintf(buffer, sizeof(buffer), "  CUR%d: %.6f\r\n", i, result_data.current[i]);
+        shellWriteString(shell, buffer);
+    }
+    
+    // 打印温度数据
+    shellWriteString(shell, "Temperature (TEMP0-TEMP1):\r\n");
+    for (i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+        snprintf(buffer, sizeof(buffer), "  TEMP%d: %.6f\r\n", i, result_data.temperature[i]);
+        shellWriteString(shell, buffer);
+    }
+    
+    return 0;
+}
+
+/**
  * @brief shell命令表
  * 
  */
@@ -676,6 +728,8 @@ const ShellCommand shellCommandList[] =
                    env_set_cur, EnvSetCur_Cmd, set cur k/b: env_set_cur <0-11> <k> <b>),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    env_set_temp, EnvSetTemp_Cmd, set temp k/b: env_set_temp <0-1> <k> <b>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   adc_print, AdcPrint_Cmd, print ADC data: adc_print),
 };
 
 

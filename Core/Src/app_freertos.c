@@ -32,6 +32,7 @@
 #include "test_bsp.h"
 #include "usart.h"
 #include "data_process.h"
+#include "iwdg.h"
 #include "FreeRTOS.h"
 #include "task.h"
 /* USER CODE END Includes */
@@ -150,6 +151,9 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
     led_toggle();
+
+    /* 喂独立看门狗 */
+    HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);
   }

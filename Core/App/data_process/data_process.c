@@ -6,6 +6,8 @@
 /*========================= 头文件包含 (Includes) ==========================*/
 #include "data_process.h"
 #include "bsp_adc.h"
+#include "bsp_can.h"
+#include "env_parameter.h"
 #include "usart.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -299,23 +301,29 @@ void DataProcess_Task(void)
         /* 处理所有通道数据 */
         DataProcess_ProcessAll();
 
-        /* 打印测试 打印所有处理后的数据  */
-        // printf("-----------------\n");
-        // printf("adc_data.vs_result: ");
-        // for (int i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
-        //     printf("%.2f ", adc_data.vs_result[i]);
-        // }
-        // printf("\n");
-        // printf("adc_data.cur_result: ");
-        // for (int i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
-        //     printf("%.2f ", adc_data.cur_result[i]);
-        // }
-        // printf("\n");
-        // printf("adc_data.temp_result: ");
-        // for (int i = 0; i < ADC_CH_TEMP_COUNT; i++) {
-        //     printf("%.2f ", adc_data.temp_result[i]);
-        // }
-        // printf("\n");
+        /* 主机模式下通过CAN发送数据 */
+        if (g_env_config.is_master)
+        {
+            ResultData_t result_data;
+            int i;
+
+            /* 应用k/b校准公式: 真实值 = ADC值 * k + b */
+            for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+                result_data.voltage[i] = adc_data.vs_result[i] * g_env_config.vs_k[i] + g_env_config.vs_b[i];
+            }
+            for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+                result_data.current[i] = adc_data.cur_result[i] * g_env_config.cur_k[i] + g_env_config.cur_b[i];
+            }
+            for (i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+                result_data.temperature[i] = adc_data.temp_result[i] * g_env_config.temp_k[i] + g_env_config.temp_b[i];
+            }
+
+            /* 发送数据 */
+            CAN_Status_t status = BSP_CAN_SendData(&result_data);
+            if (status != CAN_OK) {
+                // printf("CAN send failed, status: %d\r\n", status);
+            }
+        }
     }
 }
 
