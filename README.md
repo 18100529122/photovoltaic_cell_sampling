@@ -209,6 +209,32 @@ user:/$
 user:/$ help
 ```
 
+#### EasyFlash 命令使用示例：
+
+```
+user:/$ env_print
+=== Env List ===
+  kb_voltage = 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+  kb_current = 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+
+mode: normal
+```
+
+```
+user:/$ env_get kb_voltage
+Env 'kb_voltage' = '1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0'
+```
+
+```
+user:/$ env_set kb_voltage 1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2
+Env 'kb_voltage' set to '1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2' and saved!
+```
+
+```
+user:/$ env_del kb_voltage
+Env 'kb_voltage' deleted and saved!
+```
+
 ### 测试说明
 
 测试代码位于 `Core/test/` 目录下，通过宏定义控制开关：
