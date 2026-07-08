@@ -323,6 +323,24 @@ void DataProcess_Task(void)
             if (status != CAN_OK) {
                 // printf("CAN send failed, status: %d\r\n", status);
             }
+            /* 测试打印 所有值 */
+            if (g_env_config.print_adc_data) {
+                printf("vs_result: ");
+                for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
+                    printf("%.2f ", result_data.voltage[i]);
+                }
+                printf("\r\n");
+                printf("cur_result: ");
+                for (i = 0; i < ADC_CH_CURRENT_COUNT; i++) {
+                    printf("%.2f ", result_data.current[i]);
+                }
+                printf("\r\n");
+                printf("temp_result: ");
+                for (i = 0; i < ADC_CH_TEMP_COUNT; i++) {
+                    printf("%.2f ", result_data.temperature[i]);
+                }
+                printf("\r\n");
+            }
         }
     }
 }

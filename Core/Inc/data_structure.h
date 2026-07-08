@@ -79,6 +79,8 @@ typedef struct {
 /* Env配置结构体 */
 typedef struct {
     uint8_t is_master;                    /* 1: 主机, 0: 从机 */
+    uint8_t can_node_addr;                /* CAN 节点地址 */
+    uint8_t print_adc_data;               /* 1: 打印ADC数据, 0: 不打印 */
     float   vs_k[ADC_CH_VOLTAGE_COUNT];   /* 电压通道 k 值 (12个) */
     float   vs_b[ADC_CH_VOLTAGE_COUNT];   /* 电压通道 b 值 (12个) */
     float   cur_k[ADC_CH_CURRENT_COUNT];  /* 电流通道 k 值 (12个) */

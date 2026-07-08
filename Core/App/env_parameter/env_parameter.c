@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "cmsis_os.h"
 
 /*========================= 宏定义 (Macros) ================================*/
 #define ENV_STR_MAX_LEN     256     /* 字符串最大长度 */
@@ -96,6 +97,12 @@ void EnvParameter_Load(void)
     /* 默认主机 */
     g_env_config.is_master = 1;
     
+    /* 默认 CAN 节点地址 */
+    g_env_config.can_node_addr = 30;
+    
+    /* 默认不打印ADC数据 */
+    g_env_config.print_adc_data = 0;
+    
     /* k值默认为1.0，b值默认为0.0 */
     for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
         g_env_config.vs_k[i] = 1.0f;
@@ -120,6 +127,26 @@ void EnvParameter_Load(void)
         need_save = 1;
     } else if (strcmp(value, "slave") == 0) {
         g_env_config.is_master = 0;
+    }
+    
+    /* 加载 can_node_addr */
+    value = ef_get_env("can_node_addr");
+    if (value == NULL) {
+        /* 未找到，需要创建默认值 */
+        ef_set_env("can_node_addr", "30");
+        need_save = 1;
+    } else {
+        g_env_config.can_node_addr = (uint8_t)atoi(value);
+    }
+    
+    /* 加载 print_adc_data */
+    value = ef_get_env("print_adc_data");
+    if (value == NULL) {
+        /* 未找到，需要创建默认值 */
+        ef_set_env("print_adc_data", "0");
+        need_save = 1;
+    } else {
+        g_env_config.print_adc_data = (uint8_t)atoi(value);
     }
     
     /* 加载 vs_k */
@@ -214,6 +241,14 @@ void EnvParameter_Save(void)
     FloatArrayToString(g_env_config.temp_b, ADC_CH_TEMP_COUNT, str, sizeof(str));
     ef_set_env("temp_b", str);
     
+    /* 保存 can_node_addr */
+    snprintf(str, sizeof(str), "%d", g_env_config.can_node_addr);
+    ef_set_env("can_node_addr", str);
+    
+    /* 保存 print_adc_data */
+    snprintf(str, sizeof(str), "%d", g_env_config.print_adc_data);
+    ef_set_env("print_adc_data", str);
+    
     /* 保存到Flash */
     ef_save_env();
     printf("EnvParameter_Save\n");
@@ -247,6 +282,10 @@ static void EnvParameter_PrintAll(void)
     int i;
     printf("-----------------\r\n");
     printf("EnvParameter_Init: node_role = %s\r\n", g_env_config.is_master ? "master" : "slave");
+    printf("-----------------\r\n");
+    printf("can_node_addr = %d\r\n", g_env_config.can_node_addr);
+    printf("-----------------\r\n");
+    printf("print_adc_data = %d\r\n", g_env_config.print_adc_data);
     printf("-----------------\r\n");
     for (i = 0; i < ADC_CH_VOLTAGE_COUNT; i++) {
         printf("vs_k[%d] = %f\r\n", i, g_env_config.vs_k[i]);

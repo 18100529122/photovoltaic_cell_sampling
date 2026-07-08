@@ -10,7 +10,6 @@ extern "C" {
 #include "data_structure.h"
 
 /* 节点配置 */
-#define CAN_NODE_ADDR           30          /* 节点地址：30 */
 #define CAN_BUS_FLAG            0           /* 总线占用标志：0=从节点 */
 #define CAN_FRAME_TYPE          1           /* 帧类型：01=广播通信 */
 #define CAN_AB_BUS_FLAG         0           /* A/B总线：0=A总线 */
@@ -19,7 +18,7 @@ extern "C" {
 #define CAN_BUILD_ID(single_multi) \
     (((CAN_BUS_FLAG) << 10) | \
      ((CAN_FRAME_TYPE) << 8) | \
-     ((CAN_NODE_ADDR) << 3) | \
+     ((g_env_config.can_node_addr) << 3) | \
      ((CAN_AB_BUS_FLAG) << 2) | \
      (single_multi))
 

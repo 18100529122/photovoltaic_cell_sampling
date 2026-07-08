@@ -577,6 +577,88 @@ static int EnvSetTemp_Cmd(int argc, char *argv[])
 }
 
 /**
+ * @brief 设置CAN节点地址命令
+ * Usage: env_set_can_addr <addr>
+ */
+static int EnvSetCanAddr_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    int addr;
+    EfErrCode err;
+    
+    if (argc != 2) {
+        shellWriteString(shell, "Usage: env_set_can_addr <addr>\r\n");
+        return -1;
+    }
+    
+    addr = atoi(argv[1]);
+    
+    if (addr < 0 || addr > 127) {
+        shellWriteString(shell, "Invalid address! (0-127)\r\n");
+        return -1;
+    }
+    
+    // 更新内存中的值
+    g_env_config.can_node_addr = (uint8_t)addr;
+    
+    // 保存到Flash
+    snprintf(buffer, sizeof(buffer), "%d", addr);
+    err = ef_set_and_save_env("can_node_addr", buffer);
+    
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set can_node_addr = %d and saved! (Reboot to take effect)\r\n", addr);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
+ * @brief 设置是否打印ADC数据命令
+ * Usage: env_set_print_adc <1|0>
+ */
+static int EnvSetPrintAdc_Cmd(int argc, char *argv[])
+{
+    Shell *shell = shellGetCurrent();
+    char buffer[128];
+    int enable;
+    EfErrCode err;
+    
+    if (argc != 2) {
+        shellWriteString(shell, "Usage: env_set_print_adc <1|0>\r\n");
+        return -1;
+    }
+    
+    enable = atoi(argv[1]);
+    
+    if (enable != 0 && enable != 1) {
+        shellWriteString(shell, "Invalid value! (0 or 1)\r\n");
+        return -1;
+    }
+    
+    // 更新内存中的值
+    g_env_config.print_adc_data = (uint8_t)enable;
+    
+    // 保存到Flash
+    snprintf(buffer, sizeof(buffer), "%d", enable);
+    err = ef_set_and_save_env("print_adc_data", buffer);
+    
+    if (err == EF_NO_ERR) {
+        snprintf(buffer, sizeof(buffer), "Set print_adc_data = %d and saved! (Takes effect immediately)\r\n", enable);
+        shellWriteString(shell, buffer);
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+        shellWriteString(shell, buffer);
+        return -1;
+    }
+}
+
+/**
  * @brief ENV打印命令
  * Usage: env_print
  */
@@ -728,6 +810,10 @@ const ShellCommand shellCommandList[] =
                    env_set_cur, EnvSetCur_Cmd, set cur k/b: env_set_cur <0-11> <k> <b>),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    env_set_temp, EnvSetTemp_Cmd, set temp k/b: env_set_temp <0-1> <k> <b>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_can_addr, EnvSetCanAddr_Cmd, set CAN node address: env_set_can_addr <addr>),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+                   env_set_print_adc, EnvSetPrintAdc_Cmd, set ADC print enable: env_set_print_adc <1|0>),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
                    adc_print, AdcPrint_Cmd, print ADC data: adc_print),
 };
