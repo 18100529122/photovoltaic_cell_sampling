@@ -121,6 +121,7 @@ static uint8_t BSP_USART_CheckHeartbeatPacket(void)
     return 0;
 }
 
+static master_recv_cnt=0;
 /**
  * @brief 串口接收完成回调函数
  * @param huart 串口句柄
@@ -138,13 +139,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         /* UART5接收回调 */
         if (g_uart5_rx_len < USART_HEART_RX_BUF_SIZE - 1) {
             g_uart5_rx_buf[g_uart5_rx_len++] = s_uart5_rx_byte;
-            
+
             /* 检查是否收到完整心跳包 */
             if (BSP_USART_CheckHeartbeatPacket()) {
                 /* 验证成功，重置超时计数器 */
                 EnvParameter_ResetHeartbeatTimer();
                 /* 清空缓冲区 */
                 g_uart5_rx_len = 0;
+                //主节点收到心跳包 3次变成从节点。
+                if(g_env_config.is_master){
+                    master_recv_cnt++;
+                    if(master_recv_cnt>=3){
+                        master_recv_cnt=0;
+                        EnvParameter_SwitchToSlave();
+                    }
+                }
             }
         } else {
             /* 缓冲区溢出，保留最后(HEARTBEAT_PACKET_LEN-1)个字节 */

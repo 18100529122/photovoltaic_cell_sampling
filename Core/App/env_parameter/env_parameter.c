@@ -269,6 +269,23 @@ void EnvParameter_SwitchToMaster(void)
     NVIC_SystemReset();
 }
 
+/*
+ * @brief 切换为从机模式并重启
+*/
+void EnvParameter_SwitchToSlave(void)
+{
+    g_env_config.is_master = 0;
+    EnvParameter_Save();
+    
+    /* 延时5秒 */
+    osDelay(REBOOT_DELAY_MS);
+    
+    /* 软件复位 */
+    NVIC_SystemReset();
+}
+
+
+
 /**
  * @brief 重置心跳超时计数器
  */

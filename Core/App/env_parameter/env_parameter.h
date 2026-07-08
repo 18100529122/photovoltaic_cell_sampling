@@ -27,6 +27,7 @@ uint8_t Calculate_CRC8(const uint8_t *data, uint16_t len);
 void EnvParameter_Load(void);
 void EnvParameter_Save(void);
 void EnvParameter_SwitchToMaster(void);
+void EnvParameter_SwitchToSlave(void);
 void EnvParameter_ResetHeartbeatTimer(void);
 void FloatArrayToString(const float *array, uint16_t count, char *str, uint16_t str_len);
 void StringToFloatArray(const char *str, float *array, uint16_t count);
