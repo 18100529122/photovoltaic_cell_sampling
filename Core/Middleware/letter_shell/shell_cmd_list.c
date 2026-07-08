@@ -329,7 +329,6 @@ static int EnvSetMaster_Cmd(int argc, char *argv[])
 {
     Shell *shell = shellGetCurrent();
     char buffer[128];
-    EfErrCode err;
     
     if (argc != 2) {
         shellWriteString(shell, "Usage: env_set_master 1|0\r\n");
@@ -339,16 +338,16 @@ static int EnvSetMaster_Cmd(int argc, char *argv[])
     int is_master = atoi(argv[1]);
     const char *role_str = is_master ? "master" : "slave";
     
-    err = ef_set_and_save_env("node_role", role_str);
-    if (err == EF_NO_ERR) {
-        snprintf(buffer, sizeof(buffer), "Set node role to %s and saved! Please reboot to take effect.\r\n", role_str);
-        shellWriteString(shell, buffer);
-        return 0;
+    snprintf(buffer, sizeof(buffer), "Set node role to %s, system will reboot in 5 seconds...\r\n", role_str);
+    shellWriteString(shell, buffer);
+    
+    if (is_master) {
+        EnvParameter_SwitchToMaster();
     } else {
-        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
-        shellWriteString(shell, buffer);
-        return -1;
+        EnvParameter_SwitchToSlave();
     }
+    
+    return 0;
 }
 
 /**
@@ -766,18 +765,18 @@ const ShellCommand shellCommandList[] =
 #endif
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
                    help, shellHelp, show command info\r\nhelp [cmd]),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   users, shellUsers, list all user),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   cmds, shellCmds, list all cmd),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   vars, shellVars, list all var),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   keys, shellKeys, list all key),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   clear, shellClear, clear console),
-    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-                   sh, SHELL_AGENCY_FUNC_NAME(shellRun), run command directly),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                users, shellUsers, list all user),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                cmds, shellCmds, list all cmd),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                vars, shellVars, list all var),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                keys, shellKeys, list all key),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                clear, shellClear, clear console),
+    // SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+    //                sh, SHELL_AGENCY_FUNC_NAME(shellRun), run command directly),
 #if SHELL_EXEC_UNDEF_FUNC == 1
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
                    exec, shellExecute, execute function undefined),
