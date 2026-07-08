@@ -642,19 +642,18 @@ static int EnvSetPrintAdc_Cmd(int argc, char *argv[])
     // 更新内存中的值
     g_env_config.print_adc_data = (uint8_t)enable;
     
-    // 保存到Flash
-    snprintf(buffer, sizeof(buffer), "%d", enable);
-    err = ef_set_and_save_env("print_adc_data", buffer);
-    
-    if (err == EF_NO_ERR) {
-        snprintf(buffer, sizeof(buffer), "Set print_adc_data = %d and saved! (Takes effect immediately)\r\n", enable);
-        shellWriteString(shell, buffer);
-        return 0;
-    } else {
-        snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
-        shellWriteString(shell, buffer);
-        return -1;
-    }
+    // // 保存到Flash 不需要保存到flash
+    // snprintf(buffer, sizeof(buffer), "%d", enable);
+    // err = ef_set_and_save_env("print_adc_data", buffer);
+    // if (err == EF_NO_ERR) {
+    //     snprintf(buffer, sizeof(buffer), "Set print_adc_data = %d and saved! (Takes effect immediately)\r\n", enable);
+    //     shellWriteString(shell, buffer);
+    //     return 0;
+    // } else {
+    //     snprintf(buffer, sizeof(buffer), "Set failed! Error: %d\r\n", err);
+    //     shellWriteString(shell, buffer);
+    //     return -1;
+    // }
 }
 
 /**

@@ -140,14 +140,15 @@ void EnvParameter_Load(void)
     }
     
     /* 加载 print_adc_data */
-    value = ef_get_env("print_adc_data");
-    if (value == NULL) {
-        /* 未找到，需要创建默认值 */
-        ef_set_env("print_adc_data", "0");
-        need_save = 1;
-    } else {
-        g_env_config.print_adc_data = (uint8_t)atoi(value);
-    }
+    // value = ef_get_env("print_adc_data");
+    // if (value == NULL) {
+    //     /* 未找到，需要创建默认值 */
+    //     ef_set_env("print_adc_data", "0");
+    //     need_save = 1;
+    // } else {
+    //     g_env_config.print_adc_data = (uint8_t)atoi(value);
+    // }
+    g_env_config.print_adc_data = 0;    // 默认不打印ADC数据,不需要保存到flash
     
     /* 加载 vs_k */
     value = ef_get_env("vs_k");
@@ -245,9 +246,9 @@ void EnvParameter_Save(void)
     snprintf(str, sizeof(str), "%d", g_env_config.can_node_addr);
     ef_set_env("can_node_addr", str);
     
-    /* 保存 print_adc_data */
-    snprintf(str, sizeof(str), "%d", g_env_config.print_adc_data);
-    ef_set_env("print_adc_data", str);
+    // /* 保存 print_adc_data */
+    // snprintf(str, sizeof(str), "%d", g_env_config.print_adc_data);
+    // ef_set_env("print_adc_data", str);
     
     /* 保存到Flash */
     ef_save_env();

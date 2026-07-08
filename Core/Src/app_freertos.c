@@ -147,6 +147,8 @@ void StartDefaultTask(void *argument)
   Test_Run();
 #endif
 
+  printf("Hello %s!\r\n",g_env_config.is_master?"Master":"Slave");
+
   /* Infinite loop */
   for(;;)
   {
